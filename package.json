@@ -1,0 +1,15 @@
+{
+  "name": "steady",
+  "private": true,
+  "packageManager": "pnpm@9.15.9",
+  "scripts": {
+    "build:domain": "pnpm --filter @steady/domain build",
+    "test": "pnpm -r --if-present test",
+    "typecheck": "pnpm -r --if-present typecheck",
+    "lint": "pnpm -r --if-present lint",
+    "format": "prettier --write \"**/*.{ts,tsx,js,json,md}\" --ignore-path .prettierignore"
+  },
+  "devDependencies": {
+    "prettier": "2.8.8"
+  }
+}

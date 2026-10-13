@@ -1,0 +1,10 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
+  "buildCommand": "pnpm --filter @steady/domain build",
+  "outputDirectory": "public",
+  "functions": {
+    "api/ai/analyze-photo.ts": { "maxDuration": 60 },
+    "api/**/*.ts": { "maxDuration": 15 }
+  }
+}

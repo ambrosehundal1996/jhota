@@ -1,0 +1,18 @@
+node_modules/
+dist/
+web-build/
+coverage/
+.DS_Store
+*.log
+
+# env
+.env
+.env.*
+!.env.example
+
+# vercel
+.vercel
+
+# supabase
+supabase/.branches
+supabase/.temp
