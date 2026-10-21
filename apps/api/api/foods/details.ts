@@ -1,6 +1,6 @@
 import { requireUser } from '../../lib/auth.js';
 import { getFoodDetails } from '../../lib/foods/index.js';
-import { errorResponse, handle, json } from '../../lib/http.js';
+import { errorResponse, handle, json, preflight } from '../../lib/http.js';
 import { rateLimit } from '../../lib/rateLimit.js';
 
 export const GET = handle(async request => {
@@ -14,3 +14,5 @@ export const GET = handle(async request => {
   if (!food) return errorResponse(404, 'not_found', 'We could not find that food.');
   return json({ food });
 });
+
+export const OPTIONS = preflight;

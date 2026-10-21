@@ -36,14 +36,14 @@ export function NotificationSettingsScreen({ navigation }: RootScreenProps<'Noti
         Reminders
       </AppText>
       <AppText variant="body" tone="secondary" style={styles.sub}>
-        Informative, never guilt. We stay quiet once you’ve logged something.
+        Informative, never guilt. We stay quiet once you’ve hit your goal.
       </AppText>
 
       {permission === 'denied' ? (
         <Card style={styles.card}>
           <AppText variant="bodyStrong">Notifications are turned off</AppText>
           <AppText variant="caption" tone="secondary">
-            Allow notifications for Steady in Settings to get reminders.
+            Allow notifications for Jota in Settings to get reminders.
           </AppText>
           <Button label="Open Settings" size="medium" onPress={() => Linking.openSettings()} style={styles.cardButton} />
         </Card>
@@ -51,7 +51,7 @@ export function NotificationSettingsScreen({ navigation }: RootScreenProps<'Noti
         <Card style={styles.card}>
           <AppText variant="bodyStrong">Turn on reminders</AppText>
           <AppText variant="caption" tone="secondary">
-            One gentle nudge at 2 PM, only if nothing is logged yet.
+            A morning nudge, a 2 PM check-in if nothing is logged, and how much protein you have left later in the day.
           </AppText>
           <Button label="Allow notifications" size="medium" onPress={enable} style={styles.cardButton} />
         </Card>
@@ -61,14 +61,29 @@ export function NotificationSettingsScreen({ navigation }: RootScreenProps<'Noti
       <ListGroup>
         <ListRow title="Reminders" toggle={{ value: prefs.enabled, onChange: enabled => updateNotificationPrefs({ enabled }) }} />
         <ListRow
+          title="Morning at 9 AM"
+          subtitle="Today’s goal, if you haven’t logged yet"
+          toggle={{ value: prefs.morning_9am !== false, onChange: v => updateNotificationPrefs({ morning_9am: v }), disabled }}
+        />
+        <ListRow
           title="Nothing logged by 2 PM"
-          subtitle="“Nothing logged yet today.”"
+          subtitle="“Takes about 5 seconds to log.”"
           toggle={{ value: prefs.zero_log_2pm, onChange: v => updateNotificationPrefs({ zero_log_2pm: v }), disabled }}
         />
         <ListRow
-          title="Nothing logged by 7 PM"
-          subtitle="A last chance to set a quick total"
-          toggle={{ value: prefs.zero_log_7pm, onChange: v => updateNotificationPrefs({ zero_log_7pm: v }), disabled }}
+          title="Protein left at 4 PM"
+          subtitle="How many grams you still have to eat"
+          toggle={{ value: prefs.remaining_4pm !== false, onChange: v => updateNotificationPrefs({ remaining_4pm: v }), disabled }}
+        />
+        <ListRow
+          title="Protein left at 7 PM"
+          subtitle="How many grams you still have to eat"
+          toggle={{ value: prefs.remaining_7pm !== false, onChange: v => updateNotificationPrefs({ remaining_7pm: v }), disabled }}
+        />
+        <ListRow
+          title="Nothing logged by 8 PM"
+          subtitle="Set the day’s total in one step"
+          toggle={{ value: prefs.zero_log_8pm !== false, onChange: v => updateNotificationPrefs({ zero_log_8pm: v }), disabled }}
         />
         <ListRow
           title="Evening progress"
@@ -78,7 +93,7 @@ export function NotificationSettingsScreen({ navigation }: RootScreenProps<'Noti
         />
       </ListGroup>
       <AppText variant="caption" tone="tertiary" style={styles.footnote}>
-        Reminders use your phone’s local time. At most one per afternoon and one per evening.
+        Reminders use your phone’s local time. Protein-left reminders are skipped once you’ve hit your goal.
       </AppText>
     </Screen>
   );

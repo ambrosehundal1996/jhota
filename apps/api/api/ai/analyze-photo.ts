@@ -1,9 +1,9 @@
-import { analyzePhotoRequestSchema, type AnalyzePhotoResponse } from '@steady/domain';
-import { analyzeMealPhoto } from '../../lib/ai/analyzeMealPhoto.js';
+import { analyzePhotoRequestSchema, type AnalyzePhotoResponse } from '@jota/domain';
+import { analyzeMealPhoto, PROTEIN_PHOTO_PROMPT_VERSION } from '../../lib/ai/analyzeMealPhoto.js';
 import { requireUser } from '../../lib/auth.js';
 import { requireActiveEntitlement } from '../../lib/entitlement.js';
 import { HttpError, optionalEnv } from '../../lib/env.js';
-import { handle, json, readJson } from '../../lib/http.js';
+import { handle, json, preflight, readJson } from '../../lib/http.js';
 import { supabaseAdmin } from '../../lib/supabaseAdmin.js';
 
 export const POST = handle(async request => {
@@ -39,10 +39,21 @@ export const POST = handle(async request => {
     if (signError || !signed) throw new HttpError(404, 'photo_missing', 'The photo upload did not finish. Please retry.');
 
     const { estimate, raw, model } = await analyzeMealPhoto({ imageUrl: signed.signedUrl, userContext });
-    await db
+    const { error: saveError } = await db
       .from('ai_photo_analyses')
-      .update({ status: 'completed', model, raw_response: raw, raw_total_g: estimate.total_protein_g })
+      .update({
+        status: 'completed',
+        model,
+        prompt_version: PROTEIN_PHOTO_PROMPT_VERSION,
+        raw_response: raw,
+        raw_total_g: estimate.total_protein_g,
+        estimate,
+        overall_confidence: estimate.overall_confidence,
+        review_notes: estimate.review_notes,
+        needs_clarification: estimate.needs_clarification,
+      })
       .eq('id', row.id);
+    if (saveError) console.error('[ai] failed to persist estimate', saveError.message);
 
     const body: AnalyzePhotoResponse = { analysisId: row.id, estimate, model };
     return json(body);
@@ -54,3 +65,5 @@ export const POST = handle(async request => {
     throw error;
   }
 });
+
+export const OPTIONS = preflight;

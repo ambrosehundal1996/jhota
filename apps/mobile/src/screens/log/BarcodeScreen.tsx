@@ -19,8 +19,8 @@ import { useLogContext } from './useLogContext';
 type ScanState = { kind: 'scanning' } | { kind: 'looking_up'; code: string } | { kind: 'not_found'; code: string } | { kind: 'error'; message: string };
 
 export function BarcodeScreen({ navigation, route }: LogScreenProps<'Barcode'>) {
-  const { date, meal, src } = useLogContext(route.params);
-  const ctx = { date, meal, src };
+  const { date, src } = useLogContext(route.params);
+  const ctx = { date, src };
   const focused = useIsFocused();
   const { hasPermission, requestPermission, canRequestPermission } = useCameraPermission();
   const [state, setState] = useState<ScanState>({ kind: 'scanning' });
@@ -45,7 +45,7 @@ export function BarcodeScreen({ navigation, route }: LogScreenProps<'Barcode'>) 
       }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [navigation, date, meal, src],
+    [navigation, date, src],
   );
 
   const output = useObjectOutput({
@@ -73,7 +73,7 @@ export function BarcodeScreen({ navigation, route }: LogScreenProps<'Barcode'>) 
         <EmptyState
           icon="barcode"
           title="Scan barcodes with your camera"
-          message="Steady uses the camera only while you’re scanning. Nothing is recorded."
+          message="Jota uses the camera only while you’re scanning. Nothing is recorded."
         >
           {canRequestPermission ? (
             <Button label="Allow camera" variant="filled" size="medium" onPress={() => void requestPermission()} />

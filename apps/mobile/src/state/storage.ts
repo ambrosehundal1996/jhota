@@ -1,7 +1,7 @@
 import { createMMKV } from 'react-native-mmkv';
 import type { StateStorage } from 'zustand/middleware';
 
-export const storage = createMMKV({ id: 'steady' });
+export const storage = createMMKV({ id: 'jota' });
 
 export const zustandStorage: StateStorage = {
   getItem: name => storage.getString(name) ?? null,

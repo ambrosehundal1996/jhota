@@ -1,4 +1,4 @@
-import { lastNDates, toLocalDate } from '@steady/domain';
+import { lastNDates, toLocalDate } from '@jota/domain';
 import { NativeModules, Platform } from 'react-native';
 import { getState } from '../../state/appStore';
 import { selectDay, selectTotalsByDate } from '../../state/selectors';

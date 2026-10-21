@@ -1,6 +1,6 @@
 import NetInfo from '@react-native-community/netinfo';
 import { AppState } from 'react-native';
-import { getState, LOCAL_USER_ID, setState, type AppData } from '../../state/appStore';
+import { defaultNotificationPrefs, getState, LOCAL_USER_ID, setState, type AppData } from '../../state/appStore';
 import type { OutboxItem, SyncedTable } from '../../types/models';
 import { ensureSession } from '../supabase/auth';
 import { getSupabase } from '../supabase/client';
@@ -106,7 +106,7 @@ async function pullChanges(userId: string): Promise<void> {
 
   const { data: prefs } = await supabase.from('notification_preferences').select('*').eq('user_id', userId).maybeSingle();
   if (prefs && !pendingRowIds('notification_preferences').has(userId)) {
-    setState({ notificationPrefs: prefs as AppData['notificationPrefs'] });
+    setState({ notificationPrefs: { ...defaultNotificationPrefs(userId), ...(prefs as AppData['notificationPrefs']) } });
   }
 
   for (const { table, key } of COLLECTIONS) {

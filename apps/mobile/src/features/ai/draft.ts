@@ -1,4 +1,4 @@
-import { wasAiEstimateEdited, type LocalDate, type MealType } from '@steady/domain';
+import { wasAiEstimateEdited, type AiConfidence, type AiEstimate, type LocalDate } from '@jota/domain';
 import { analytics } from '../../analytics';
 import { ApiError } from '../../services/api/client';
 import { analyzeMealPhoto, uploadMealPhoto } from '../../services/ai/photoAnalysis';
@@ -17,12 +17,11 @@ function patchDraft(patch: Partial<AiDraft>): void {
   setState(s => (s.aiDraft ? { aiDraft: { ...s.aiDraft, ...patch } } : {}));
 }
 
-export function startDraft(photoUri: string, date: LocalDate, meal: MealType): void {
+export function startDraft(photoUri: string, date: LocalDate): void {
   setState({
     aiDraft: {
       id: uuid(),
       date,
-      meal,
       photoUri,
       storagePath: null,
       context: '',
@@ -32,21 +31,55 @@ export function startDraft(photoUri: string, date: LocalDate, meal: MealType): v
       rawItems: null,
       rawTotal: null,
       items: [],
-      notes: null,
+      overallConfidence: null,
+      reviewNotes: [],
+      clarificationQuestion: null,
+      analyzedContext: null,
       createdAt: nowIso(),
     },
   });
 }
 
 export const setDraftContext = (context: string) => patchDraft({ context });
-export const setDraftMeal = (meal: MealType) => patchDraft({ meal });
+
+function toDraftItems(estimate: AiEstimate): AiDraftItem[] {
+  return estimate.items.map(item => ({
+    key: uuid(),
+    name: item.name,
+    portion: item.portion_description,
+    protein_g: round1(item.protein_g),
+    original_protein_g: round1(item.protein_g),
+    original_name: item.name,
+    confidence: item.confidence,
+    uncertainty_reasons: item.uncertainty_reasons,
+  }));
+}
+
+function confidenceProps(estimate: AiEstimate) {
+  return {
+    overall_confidence: estimate.overall_confidence,
+    item_count: estimate.items.length,
+    low_confidence_items: estimate.items.filter(i => i.confidence === 'low').length,
+    needs_clarification: estimate.needs_clarification,
+  };
+}
+
+/** True when the user has typed something new since the last analysis. */
+export function hasNewContext(draft: Pick<AiDraft, 'context' | 'analyzedContext'>): boolean {
+  return draft.context.trim() !== (draft.analyzedContext ?? '').trim();
+}
 
 /** Uploads (once) and analyzes the draft photo. Safe to call again to retry. */
 export async function runAnalysis(): Promise<void> {
   const draft = getState().aiDraft;
   if (!draft?.photoUri) return;
+  const clarifying = draft.status === 'clarify';
+  // A clarification retry needs new information; re-asking the model the same thing won't help.
+  if (clarifying && !hasNewContext(draft)) return;
+  const previousAnalysisId = draft.analysisId;
+  const context = draft.context.trim();
   const started = Date.now();
-  analytics.track('ai_photo_started', { retry: draft.status === 'failed', has_context: !!draft.context.trim() });
+  analytics.track('ai_photo_started', { retry: draft.status === 'failed' || clarifying, has_context: !!context });
   try {
     let storagePath = draft.storagePath;
     if (!storagePath) {
@@ -58,37 +91,85 @@ export async function runAnalysis(): Promise<void> {
       patchDraft({ storagePath });
     }
     patchDraft({ status: 'analyzing', error: null });
-    const { analysisId, estimate } = await analyzeMealPhoto(storagePath, draft.context);
+    const { analysisId, estimate } = await analyzeMealPhoto(storagePath, context);
+    if (previousAnalysisId && previousAnalysisId !== analysisId) {
+      enqueueUpdate('ai_photo_analyses', previousAnalysisId, { status: 'discarded' });
+    }
+    const result = {
+      analysisId,
+      analyzedContext: context,
+      rawItems: estimate.items.map(i => ({ name: i.name, protein_g: i.protein_g })),
+      rawTotal: estimate.total_protein_g,
+      items: toDraftItems(estimate),
+      overallConfidence: estimate.overall_confidence,
+      reviewNotes: estimate.review_notes,
+      clarificationQuestion: estimate.clarification_question,
+    };
+
+    if (estimate.needs_clarification) {
+      patchDraft({ ...result, status: 'clarify' });
+      analytics.track('ai_clarification_requested', { ...confidenceProps(estimate), repeat: clarifying });
+      return;
+    }
     if (!estimate.is_food || estimate.items.length === 0) {
-      patchDraft({ status: 'failed', error: NOT_FOOD, analysisId });
+      patchDraft({ ...result, status: 'failed', error: NOT_FOOD });
       analytics.track('ai_photo_failed', { code: NOT_FOOD });
       return;
     }
-    const items: AiDraftItem[] = estimate.items.map(item => ({
-      key: uuid(),
-      name: item.name,
-      portion: item.portion,
-      protein_g: round1(item.protein_g),
-      original_protein_g: round1(item.protein_g),
-    }));
-    patchDraft({
-      status: 'ready',
-      analysisId,
-      rawItems: estimate.items.map(i => ({ name: i.name, protein_g: i.protein_g })),
-      rawTotal: estimate.total_protein_g,
-      items,
-      notes: estimate.notes || null,
-    });
+    patchDraft({ ...result, status: 'ready' });
     analytics.track('ai_photo_completed', {
-      item_count: items.length,
+      item_count: estimate.items.length,
       total_g: Math.round(estimate.total_protein_g),
       duration_ms: Date.now() - started,
     });
+    analytics.track('ai_analysis_confidence_assigned', confidenceProps(estimate));
+    if (estimate.overall_confidence === 'low') analytics.track('ai_low_confidence_result', confidenceProps(estimate));
+    if (clarifying) {
+      analytics.track('ai_clarification_completed', { outcome: 'reanalyzed', overall_confidence: estimate.overall_confidence });
+    }
   } catch (error) {
     const apiError = error instanceof ApiError ? error : null;
-    patchDraft({ status: 'failed', error: apiError?.message ?? 'Something went wrong. Please try again.' });
+    patchDraft({ status: clarifying ? 'clarify' : 'failed', error: apiError?.message ?? 'Something went wrong. Please try again.' });
     analytics.track('ai_photo_failed', { code: apiError?.code ?? 'unknown', status: apiError?.status ?? 0 });
   }
+}
+
+/** From a clarification request, keep the defensible items the model did return. */
+export function acceptRoughEstimate(): void {
+  const draft = getState().aiDraft;
+  if (draft?.status !== 'clarify' || !draft.items.length) return;
+  patchDraft({ status: 'ready', error: null });
+  analytics.track('ai_clarification_completed', { outcome: 'kept_estimate', overall_confidence: draft.overallConfidence ?? null });
+}
+
+/** The user chose to enter protein themselves instead of answering. */
+export function abandonClarification(): void {
+  const draft = getState().aiDraft;
+  if (draft?.status === 'clarify') analytics.track('ai_clarification_completed', { outcome: 'manual_entry' });
+  discardDraft();
+}
+
+export type ItemConfidenceTag = AiConfidence | 'user_adjusted' | 'user_added' | null;
+
+/**
+ * What to show for an item's confidence. Once the user changes an item, the AI's rating no
+ * longer describes it, so it is labelled as theirs instead.
+ */
+export function itemConfidenceTag(item: AiDraftItem): ItemConfidenceTag {
+  if (item.original_protein_g === null) return 'user_added';
+  const nameChanged = item.original_name != null && item.name.trim() !== item.original_name.trim();
+  if (nameChanged || round1(item.protein_g) !== round1(item.original_protein_g)) return 'user_adjusted';
+  return item.confidence ?? null;
+}
+
+export function isDraftEdited(draft: Pick<AiDraft, 'items' | 'rawItems'>): boolean {
+  return (
+    draft.items.length !== (draft.rawItems?.length ?? 0) ||
+    draft.items.some(i => {
+      const tag = itemConfidenceTag(i);
+      return tag === 'user_adjusted' || tag === 'user_added';
+    })
+  );
 }
 
 export const draftTotal = (items: AiDraftItem[]) => round1(items.reduce((sum, i) => sum + (i.protein_g || 0), 0));
@@ -168,7 +249,6 @@ export function confirmDraft(): FoodLog[] {
         custom_food_id: null,
         barcode: null,
       },
-      meal: draft.meal,
       date: draft.date,
       source: 'ai_photo' as const,
       ai: {
@@ -183,7 +263,13 @@ export function confirmDraft(): FoodLog[] {
     enqueueUpdate('ai_photo_analyses', draft.analysisId, {
       status: 'confirmed',
       final_total_g: total,
-      final_items: items.map(i => ({ name: i.name, protein_g: i.protein_g, original_protein_g: i.original_protein_g })),
+      final_items: items.map(i => ({
+        name: i.name,
+        protein_g: i.protein_g,
+        original_protein_g: i.original_protein_g,
+        confidence: i.confidence ?? null,
+        user_adjusted: itemConfidenceTag(i) === 'user_adjusted' || itemConfidenceTag(i) === 'user_added',
+      })),
       was_edited: wasEdited,
     });
   }
@@ -193,9 +279,16 @@ export function confirmDraft(): FoodLog[] {
       final_total_g: Math.round(total),
       item_count_raw: draft.rawItems?.length ?? 0,
       item_count_final: items.length,
+      overall_confidence: draft.overallConfidence ?? null,
     });
   }
-  analytics.track('ai_estimate_confirmed', { item_count: items.length, total_g: Math.round(total), edited: wasEdited });
+  analytics.track('ai_estimate_confirmed', {
+    item_count: items.length,
+    total_g: Math.round(total),
+    edited: wasEdited,
+    overall_confidence: draft.overallConfidence ?? null,
+    low_confidence_items: items.filter(i => i.confidence === 'low').length,
+  });
   setState({ aiDraft: null });
   return logs;
 }

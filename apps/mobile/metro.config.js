@@ -5,7 +5,7 @@ const projectRoot = __dirname;
 const workspaceRoot = path.resolve(projectRoot, '../..');
 
 /**
- * Monorepo setup: watch the workspace so @steady/domain source changes hot-reload, and
+ * Monorepo setup: watch the workspace so @jota/domain source changes hot-reload, and
  * resolve modules from the hoisted root node_modules.
  *
  * @type {import('@react-native/metro-config').MetroConfig}

@@ -1,23 +1,7 @@
 import { z } from 'zod';
+import { UNCERTAINTY_REASONS, type AiEstimate } from './aiEstimate';
 
-export const aiConfidenceSchema = z.enum(['low', 'medium', 'high']);
-
-export const aiEstimateItemSchema = z.object({
-  name: z.string().min(1).max(80),
-  portion: z.string().max(80),
-  protein_g: z.number().min(0).max(300),
-  confidence: aiConfidenceSchema,
-});
-
-export const aiEstimateSchema = z.object({
-  is_food: z.boolean(),
-  items: z.array(aiEstimateItemSchema).max(12),
-  total_protein_g: z.number().min(0).max(600),
-  notes: z.string().max(240),
-});
-
-export type AiEstimateItem = z.infer<typeof aiEstimateItemSchema>;
-export type AiEstimate = z.infer<typeof aiEstimateSchema>;
+const confidenceEnum = ['high', 'medium', 'low'] as const;
 
 /** JSON Schema for OpenAI structured outputs (strict mode requires every key listed). */
 export const aiEstimateJsonSchema = {
@@ -26,25 +10,51 @@ export const aiEstimateJsonSchema = {
   schema: {
     type: 'object',
     additionalProperties: false,
-    required: ['is_food', 'items', 'total_protein_g', 'notes'],
+    required: ['is_food', 'items', 'total_protein_g', 'overall_confidence', 'review_notes', 'needs_clarification', 'clarification_question'],
     properties: {
-      is_food: { type: 'boolean', description: 'False when the photo does not show food.' },
+      is_food: { type: 'boolean', description: 'False when the photo does not show food or drink.' },
       items: {
         type: 'array',
         items: {
           type: 'object',
           additionalProperties: false,
-          required: ['name', 'portion', 'protein_g', 'confidence'],
+          required: ['name', 'portion_description', 'estimated_weight_g', 'protein_g', 'confidence', 'uncertainty_reasons'],
           properties: {
             name: { type: 'string', description: 'Short food name, e.g. "Grilled chicken breast".' },
-            portion: { type: 'string', description: 'Estimated portion, e.g. "about 6 oz".' },
-            protein_g: { type: 'number', description: 'Estimated grams of protein for this portion.' },
-            confidence: { type: 'string', enum: ['low', 'medium', 'high'] },
+            portion_description: { type: 'string', description: 'Estimated portion, e.g. "about 150g cooked".' },
+            estimated_weight_g: {
+              type: ['number', 'null'],
+              description: 'Estimated edible weight in grams, or null when not supported by the evidence.',
+            },
+            protein_g: { type: 'integer', description: 'Estimated grams of protein for this portion.' },
+            confidence: { type: 'string', enum: confidenceEnum },
+            uncertainty_reasons: {
+              type: 'array',
+              description: 'Only uncertainties that materially affect this protein estimate. Empty when none.',
+              items: { type: 'string', enum: UNCERTAINTY_REASONS },
+            },
           },
         },
       },
-      total_protein_g: { type: 'number' },
-      notes: { type: 'string', description: 'One short sentence on assumptions. Empty if none.' },
+      total_protein_g: { type: 'integer', description: 'Exact sum of item protein_g.' },
+      overall_confidence: {
+        type: ['string', 'null'],
+        enum: [...confidenceEnum, null],
+        description: 'Null when is_food is false.',
+      },
+      review_notes: {
+        type: 'array',
+        description: 'Up to two short sentences on what the user should verify. Empty for straightforward meals.',
+        items: { type: 'string' },
+      },
+      needs_clarification: {
+        type: 'boolean',
+        description: 'True only when a meaningful protein estimate is not possible without more information.',
+      },
+      clarification_question: {
+        type: ['string', 'null'],
+        description: 'One short question for the user when needs_clarification is true, otherwise null.',
+      },
     },
   },
 } as const;

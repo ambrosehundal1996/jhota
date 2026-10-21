@@ -1,4 +1,4 @@
-import type { GoalType } from '@steady/domain';
+import type { GoalType } from '@jota/domain';
 import type { IconName } from '../components';
 
 export const GOAL_OPTIONS: { value: GoalType; title: string; subtitle: string; icon: IconName }[] = [

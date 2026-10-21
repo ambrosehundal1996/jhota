@@ -1,5 +1,5 @@
-import { addDays, compareLocalDates, type LocalDate } from '@steady/domain';
-import React, { useEffect, useMemo, useState } from 'react';
+import { addDays, compareLocalDates, type LocalDate } from '@jota/domain';
+import React, { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { analytics } from '../../analytics';
 import {
@@ -19,10 +19,9 @@ import { useDay, useTotalsByDate } from '../../hooks/useAppData';
 import { useLocalToday } from '../../hooks/useLocalToday';
 import { openLog } from '../../navigation/openLog';
 import type { RootScreenProps } from '../../navigation/types';
-import { groupByMeal, MEAL_LABELS, type MealGroup } from '../../state/selectors';
 import { spacing } from '../../theme';
 import { formatDayTitle, rangeLabel } from '../../utils/format';
-import { MealGroupCard } from '../today/MealGroupCard';
+import { LoggedFoodsCard } from '../today/LoggedFoodsCard';
 import { OverrideBanner } from '../today/OverrideBanner';
 import { MonthCalendar } from './MonthCalendar';
 
@@ -31,9 +30,8 @@ export function DayHistoryScreen({ navigation, route }: RootScreenProps<'Day'>) 
   const [date, setDate] = useState<LocalDate>(route.params.date);
   const day = useDay(date);
   const totals = useTotalsByDate();
-  const groups = useMemo(() => groupByMeal(day.logs), [day.logs]);
   const [calendarOpen, setCalendarOpen] = useState(false);
-  const [saving, setSaving] = useState<MealGroup | null>(null);
+  const [saving, setSaving] = useState(false);
   const [mealName, setMealName] = useState('');
   const isToday = date === today;
   const ctx = { date, src: 'history' as const };
@@ -43,9 +41,10 @@ export function DayHistoryScreen({ navigation, route }: RootScreenProps<'Day'>) 
     analytics.track('day_history_viewed', { days_ago: Math.round((Date.parse(today) - Date.parse(date)) / 86_400_000) });
   }, [date, today]);
 
-  const copyToToday = (group: MealGroup) => {
-    const created = copyLogsToDate(group.logs, today);
-    showToast(`Copied ${MEAL_LABELS[group.meal].toLowerCase()} to today · ${group.protein}g`, {
+  const copyToToday = () => {
+    const created = copyLogsToDate(day.logs, today);
+    const protein = Math.round(created.reduce((sum, l) => sum + l.protein_g, 0));
+    showToast(`Copied ${created.length} item${created.length === 1 ? '' : 's'} to today · ${protein}g`, {
       label: 'Undo',
       onPress: () => undoLogs(created.map(l => l.id)),
     });
@@ -53,8 +52,8 @@ export function DayHistoryScreen({ navigation, route }: RootScreenProps<'Day'>) 
 
   const saveMeal = () => {
     if (!saving || !mealName.trim()) return;
-    saveMealFromLogs(mealName, saving.logs, saving.meal === 'other' ? null : saving.meal);
-    setSaving(null);
+    saveMealFromLogs(mealName, day.logs);
+    setSaving(false);
     showToast('Saved to My foods');
   };
 
@@ -114,16 +113,16 @@ export function DayHistoryScreen({ navigation, route }: RootScreenProps<'Day'>) 
           />
         ) : null}
 
-        {groups.map(group => (
-          <View key={group.meal} style={styles.group}>
-            <MealGroupCard
-              group={group}
+        {day.logs.length ? (
+          <View style={styles.group}>
+            <LoggedFoodsCard
+              logs={day.logs}
               muted={!!day.override}
               onPressLog={log => openLog(navigation, 'FoodDetail', { mode: 'edit', logId: log.id })}
             />
             <View style={styles.groupActions}>
               {!isToday ? (
-                <Pressable accessibilityRole="button" onPress={() => copyToToday(group)} hitSlop={8}>
+                <Pressable accessibilityRole="button" onPress={copyToToday} hitSlop={8}>
                   <AppText variant="captionStrong" tone="accent">
                     Copy to today
                   </AppText>
@@ -132,8 +131,8 @@ export function DayHistoryScreen({ navigation, route }: RootScreenProps<'Day'>) 
               <Pressable
                 accessibilityRole="button"
                 onPress={() => {
-                  setMealName(group.meal === 'other' ? 'My meal' : `My ${MEAL_LABELS[group.meal].toLowerCase()}`);
-                  setSaving(group);
+                  setMealName('My meal');
+                  setSaving(true);
                 }}
                 hitSlop={8}
               >
@@ -143,7 +142,7 @@ export function DayHistoryScreen({ navigation, route }: RootScreenProps<'Day'>) 
               </Pressable>
             </View>
           </View>
-        ))}
+        ) : null}
 
         {!day.logs.length && !day.override ? (
           <EmptyState icon="calendar" title="Nothing logged this day" message="You can still add what you ate, or set a total for the day." />
@@ -169,13 +168,13 @@ export function DayHistoryScreen({ navigation, route }: RootScreenProps<'Day'>) 
       </ConfirmSheet>
 
       <ConfirmSheet
-        visible={!!saving}
+        visible={saving}
         title="Save as meal"
         message="Log the whole meal with one tap from My foods."
-        onDismiss={() => setSaving(null)}
+        onDismiss={() => setSaving(false)}
         actions={[
           { label: 'Save meal', onPress: saveMeal, variant: 'filled' },
-          { label: 'Cancel', onPress: () => setSaving(null), variant: 'ghost' },
+          { label: 'Cancel', onPress: () => setSaving(false), variant: 'ghost' },
         ]}
       >
         <TextField label="Name" value={mealName} onChangeText={setMealName} maxLength={60} autoFocus />

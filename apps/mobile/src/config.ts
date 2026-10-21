@@ -12,9 +12,9 @@ export const appConfig = {
   entitlementId: read('REVENUECAT_ENTITLEMENT_ID') || 'pro',
   posthogKey: read('POSTHOG_API_KEY'),
   posthogHost: read('POSTHOG_HOST') || 'https://us.i.posthog.com',
-  privacyUrl: read('PRIVACY_URL') || 'https://steady.app/privacy',
-  termsUrl: read('TERMS_URL') || 'https://steady.app/terms',
-  supportEmail: read('SUPPORT_EMAIL') || 'support@steady.app',
+  privacyUrl: read('PRIVACY_URL') || 'https://jota.app/privacy',
+  termsUrl: read('TERMS_URL') || 'https://jota.app/terms',
+  supportEmail: read('SUPPORT_EMAIL') || 'support@jota.app',
 } as const;
 
 export const isSupabaseConfigured = () => !!appConfig.supabaseUrl && !!appConfig.supabaseAnonKey;

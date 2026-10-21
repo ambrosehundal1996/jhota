@@ -7,7 +7,6 @@ import {
   EmptyState,
   FoodRow,
   Icon,
-  MealSelector,
   MethodTile,
   Screen,
   SectionLabel,
@@ -39,14 +38,14 @@ const TABS = [
 ] as const;
 
 export function LogHomeScreen({ navigation, route }: LogScreenProps<'LogHome'>) {
-  const { date, isToday, meal, setMeal, src } = useLogContext(route.params);
+  const { date, isToday, src } = useLogContext(route.params);
   const [tab, setTab] = useState<Tab>('recent');
   const recents = useRecents(20);
   const favorites = useFavorites();
   const customFoods = useCustomFoods();
   const savedMeals = useAppStore(s => s.savedMeals);
   const savedMealItems = useAppStore(s => s.savedMealItems);
-  const ctx = { date, meal, src };
+  const ctx = { date, src };
 
   const meals = useMemo(
     () =>
@@ -74,7 +73,6 @@ export function LogHomeScreen({ navigation, route }: LogScreenProps<'LogHome'>) 
   return (
     <Screen edges={['bottom']}>
       <SheetHeader title={isToday ? 'Log food' : `Log food · ${formatShortDay(date)}`} onClose={() => closeLog(navigation)} />
-      <MealSelector value={meal} onChange={setMeal} />
 
       <Pressable
         accessibilityRole="search"
@@ -112,8 +110,10 @@ export function LogHomeScreen({ navigation, route }: LogScreenProps<'LogHome'>) 
                   navigation.navigate('FoodDetail', { ...ctx, mode: 'add', food: recentToLoggable(recent), source: 'recent' })
                 }
                 onAdd={() => {
-                  const log = relogRecent(recent, date, meal);
+                  const log = relogRecent(recent, date);
+                  if (!log) return;
                   added(recent.food_name, log.protein_g, [log.id]);
+                  closeLog(navigation);
                 }}
                 addLabel={`Add ${recent.food_name}`}
                 last={i === recents.length - 1}
@@ -139,8 +139,10 @@ export function LogHomeScreen({ navigation, route }: LogScreenProps<'LogHome'>) 
                   navigation.navigate('FoodDetail', { ...ctx, mode: 'add', food: favoriteToLoggable(fav), source: 'favorite' })
                 }
                 onAdd={() => {
-                  const log = relogFavorite(fav, date, meal);
+                  const log = relogFavorite(fav, date);
+                  if (!log) return;
                   added(fav.food_name, log.protein_g, [log.id]);
+                  closeLog(navigation);
                 }}
                 addLabel={`Add ${fav.food_name}`}
                 last={i === favorites.length - 1}
@@ -164,8 +166,10 @@ export function LogHomeScreen({ navigation, route }: LogScreenProps<'LogHome'>) 
                   detail={`${m.count} item${m.count === 1 ? '' : 's'}`}
                   protein={m.protein}
                   onAdd={() => {
-                    const logs = logSavedMeal(m.id, date, meal);
+                    const logs = logSavedMeal(m.id, date);
+                    if (!logs.length) return;
                     added(m.name, m.protein, logs.map(l => l.id));
+                    closeLog(navigation);
                   }}
                   addLabel={`Add ${m.name}`}
                   last={i === meals.length - 1}

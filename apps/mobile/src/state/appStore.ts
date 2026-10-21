@@ -1,4 +1,4 @@
-import { DEFAULT_REMINDER_PREFERENCES, type GoalType, type LocalDate, type WeightUnit } from '@steady/domain';
+import { DEFAULT_REMINDER_PREFERENCES, type GoalType, type LocalDate, type WeightUnit } from '@jota/domain';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import type {
@@ -28,9 +28,11 @@ export interface OnboardingDraft {
 
 export interface AppFlags {
   notificationPromptShown: boolean;
-  /** Date for which the goal-reached screen was already shown. */
+  /** Local calendar date of the last goal celebration. Once-per-day; never re-fires after a delete. */
   celebratedDate: LocalDate | null;
   pendingCelebrationDate: LocalDate | null;
+  /** Date for which the halfway chip already played. */
+  halfwayDate: LocalDate | null;
   reportedReminderIds: string[];
   devBypassPaywall: boolean;
 }
@@ -58,8 +60,11 @@ export interface AppData {
 export const defaultNotificationPrefs = (userId: string): NotificationPreferences => ({
   user_id: userId,
   enabled: DEFAULT_REMINDER_PREFERENCES.enabled,
+  morning_9am: DEFAULT_REMINDER_PREFERENCES.morning9am,
   zero_log_2pm: DEFAULT_REMINDER_PREFERENCES.zeroLog2pm,
-  zero_log_7pm: DEFAULT_REMINDER_PREFERENCES.zeroLog7pm,
+  remaining_4pm: DEFAULT_REMINDER_PREFERENCES.remaining4pm,
+  remaining_7pm: DEFAULT_REMINDER_PREFERENCES.remaining7pm,
+  zero_log_8pm: DEFAULT_REMINDER_PREFERENCES.zeroLog8pm,
   progress_reminder: DEFAULT_REMINDER_PREFERENCES.progressReminder,
   permission_status: null,
   updated_at: new Date(0).toISOString(),
@@ -86,6 +91,7 @@ export const initialAppData = (): AppData => ({
     notificationPromptShown: false,
     celebratedDate: null,
     pendingCelebrationDate: null,
+    halfwayDate: null,
     reportedReminderIds: [],
     devBypassPaywall: false,
   },
@@ -93,9 +99,19 @@ export const initialAppData = (): AppData => ({
 
 export const useAppStore = create<AppData>()(
   persist(initialAppData, {
-    name: 'steady-app',
-    version: 1,
+    name: 'jota-app',
+    version: 3,
     storage: createJSONStorage(() => zustandStorage),
+    migrate: (persisted, version) => {
+      const state = persisted as AppData;
+      if (version < 2) {
+        state.notificationPrefs = { ...defaultNotificationPrefs(state.userId), ...state.notificationPrefs };
+      }
+      if (version < 3) {
+        state.flags = { ...state.flags, halfwayDate: state.flags.halfwayDate ?? null };
+      }
+      return state;
+    },
   }),
 );
 

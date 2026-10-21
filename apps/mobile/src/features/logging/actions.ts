@@ -1,8 +1,11 @@
-import type { LocalDate, LogSource, MealType, RecentFood } from '@steady/domain';
+import type { LocalDate, LogSource, RecentFood } from '@jota/domain';
+import { showToast } from '../../components/Toast';
 import { analytics } from '../../analytics';
+import { haptic } from '../../services/haptics';
 import { getState, setState } from '../../state/appStore';
 import { enqueueUpsert } from '../../state/outbox';
-import { findFavorite, logsForDate, overrideForDate } from '../../state/selectors';
+import { findFavorite, logsForDate, overrideForDate, selectDay } from '../../state/selectors';
+import { playLogFeedback } from './feedback';
 import type {
   CustomFood,
   DailyOverride,
@@ -16,16 +19,31 @@ import { nowIso, uuid } from '../../utils/id';
 
 const round1 = (value: number) => Math.round(value * 10) / 10;
 
+function nowMs(): number {
+  const perf = (globalThis as { performance?: { now: () => number } }).performance;
+  return typeof perf?.now === 'function' ? perf.now() : Date.now();
+}
+
 function persistLog(log: FoodLog): void {
-  setState(state => ({ logs: { ...state.logs, [log.id]: log } }));
-  enqueueUpsert('food_logs', log.id, { ...log });
+  const previous = getState().logs[log.id];
+  try {
+    setState(state => ({ logs: { ...state.logs, [log.id]: log } }));
+    enqueueUpsert('food_logs', log.id, { ...log });
+  } catch (error) {
+    setState(state => {
+      const logs = { ...state.logs };
+      if (previous) logs[log.id] = previous;
+      else delete logs[log.id];
+      return { logs };
+    });
+    throw error;
+  }
 }
 
 export interface NewLogInput {
   food: LoggableFood;
   /** Multiplier of the food's serving. */
   servings?: number;
-  meal: MealType | null;
   date: LocalDate;
   source: LogSource;
   ai?: { analysisId: string | null; originalProteinG: number | null; wasEdited: boolean };
@@ -39,7 +57,7 @@ export function buildLog(input: NewLogInput, userId: string, now = nowIso()): Fo
     user_id: userId,
     log_date: input.date,
     logged_at: now,
-    meal_type: input.meal,
+    meal_type: null,
     food_name: input.food.food_name.trim() || 'Quick add',
     brand: input.food.brand,
     serving_quantity: input.food.serving_quantity === null ? null : round1(input.food.serving_quantity * servings),
@@ -62,19 +80,41 @@ export function buildLog(input: NewLogInput, userId: string, now = nowIso()): Fo
 }
 
 export function addFoodLogs(inputs: NewLogInput[]): FoodLog[] {
+  if (!inputs.length) return [];
+  const started = __DEV__ ? nowMs() : 0;
+  const prevTotal = selectDay(getState(), inputs[0]!.date).total.total;
+  const snapshot = { logs: getState().logs, outbox: getState().outbox };
   const { userId } = getState();
   const logs = inputs.map(input => buildLog(input, userId));
-  for (const log of logs) {
-    persistLog(log);
-    analytics.track('food_logged', { source: log.source, meal: log.meal_type, protein_g: log.protein_g });
+  try {
+    for (const log of logs) persistLog(log);
+  } catch {
+    setState({ logs: snapshot.logs, outbox: snapshot.outbox });
+    haptic('error');
+    showToast('Couldn’t save that log.', { label: 'Retry', onPress: () => addFoodLogs(inputs), error: true });
+    return [];
   }
+  for (const log of logs) {
+    analytics.track('food_logged', { source: log.source, protein_g: log.protein_g });
+  }
+  if (__DEV__) {
+    const elapsed = nowMs() - started;
+    console.log('[log] tap-to-ui', Math.round(elapsed), 'ms');
+  }
+  playLogFeedback({
+    grams: logs.reduce((sum, log) => sum + log.protein_g, 0),
+    date: logs[0]!.log_date,
+    prevTotal,
+  });
   return logs;
 }
 
-export const addFoodLog = (input: NewLogInput): FoodLog => addFoodLogs([input])[0]!;
+export function addFoodLog(input: NewLogInput): FoodLog | undefined {
+  return addFoodLogs([input])[0];
+}
 
 export type EditableLogFields = Partial<
-  Pick<FoodLog, 'meal_type' | 'protein_g' | 'serving_quantity' | 'food_name' | 'calories' | 'carbs_g' | 'fat_g' | 'log_date'>
+  Pick<FoodLog, 'protein_g' | 'serving_quantity' | 'food_name' | 'calories' | 'carbs_g' | 'fat_g' | 'log_date'>
 >;
 
 export function updateFoodLog(id: string, patch: EditableLogFields): void {
@@ -104,7 +144,7 @@ export function undoLogs(ids: string[]): void {
   }
 }
 
-export function quickAdd(args: { grams: number; name?: string; meal: MealType | null; date: LocalDate }): FoodLog {
+export function quickAdd(args: { grams: number; name?: string; date: LocalDate }): FoodLog | undefined {
   const log = addFoodLog({
     food: {
       food_name: args.name?.trim() || 'Quick add',
@@ -122,11 +162,10 @@ export function quickAdd(args: { grams: number; name?: string; meal: MealType | 
       custom_food_id: null,
       barcode: null,
     },
-    meal: args.meal,
     date: args.date,
     source: 'quick_add',
   });
-  analytics.track('quick_add_used', { protein_g: args.grams, named: !!args.name?.trim(), meal: args.meal });
+  if (log) analytics.track('quick_add_used', { protein_g: args.grams, named: !!args.name?.trim() });
   return log;
 }
 
@@ -150,9 +189,9 @@ export function recentToLoggable(recent: RecentFood): LoggableFood {
 }
 
 /** One-tap re-log with the most recently used serving. */
-export function relogRecent(recent: RecentFood, date: LocalDate, meal: MealType | null): FoodLog {
-  const log = addFoodLog({ food: recentToLoggable(recent), meal, date, source: 'recent' });
-  analytics.track('recent_food_logged', { protein_g: log.protein_g });
+export function relogRecent(recent: RecentFood, date: LocalDate): FoodLog | undefined {
+  const log = addFoodLog({ food: recentToLoggable(recent), date, source: 'recent' });
+  if (log) analytics.track('recent_food_logged', { protein_g: log.protein_g });
   return log;
 }
 
@@ -175,9 +214,9 @@ export function favoriteToLoggable(fav: Favorite): LoggableFood {
   };
 }
 
-export function relogFavorite(fav: Favorite, date: LocalDate, meal: MealType | null): FoodLog {
-  const log = addFoodLog({ food: favoriteToLoggable(fav), meal, date, source: 'favorite' });
-  analytics.track('favorite_food_logged', { protein_g: log.protein_g });
+export function relogFavorite(fav: Favorite, date: LocalDate): FoodLog | undefined {
+  const log = addFoodLog({ food: favoriteToLoggable(fav), date, source: 'favorite' });
+  if (log) analytics.track('favorite_food_logged', { protein_g: log.protein_g });
   return log;
 }
 
@@ -231,6 +270,7 @@ export function removeFavorite(id: string): void {
 /** Sets (not adds) the day's total. Individual logs are kept and still visible in history. */
 export function setDailyOverride(date: LocalDate, proteinTotalG: number): DailyOverride {
   const state = getState();
+  const prevTotal = selectDay(state, date).total.total;
   const existing =
     overrideForDate(state.overrides, date) ?? Object.values(state.overrides).find(o => o.log_date === date) ?? null;
   const now = nowIso();
@@ -251,6 +291,9 @@ export function setDailyOverride(date: LocalDate, proteinTotalG: number): DailyO
     protein_g: override.protein_total_g,
     had_entries: logsForDate(state.logs, date).length > 0,
   });
+  if (override.protein_total_g > prevTotal) {
+    playLogFeedback({ grams: override.protein_total_g - prevTotal, date, prevTotal });
+  }
   return override;
 }
 
@@ -331,22 +374,22 @@ function logToLoggable(log: FoodLog): LoggableFood {
   };
 }
 
-export function copyLogsToDate(logs: FoodLog[], toDate: LocalDate, meal?: MealType | null): FoodLog[] {
+export function copyLogsToDate(logs: FoodLog[], toDate: LocalDate): FoodLog[] {
   const created = addFoodLogs(
-    logs.map(log => ({ food: logToLoggable(log), meal: meal === undefined ? log.meal_type : meal, date: toDate, source: 'copy' as const })),
+    logs.map(log => ({ food: logToLoggable(log), date: toDate, source: 'copy' as const })),
   );
   analytics.track('meal_copied', { items: logs.length });
   return created;
 }
 
-export function saveMealFromLogs(name: string, logs: FoodLog[], defaultMeal: MealType | null): SavedMeal {
+export function saveMealFromLogs(name: string, logs: FoodLog[]): SavedMeal {
   const { userId } = getState();
   const now = nowIso();
   const meal: SavedMeal = {
     id: uuid(),
     user_id: userId,
     name: name.trim(),
-    default_meal_type: defaultMeal,
+    default_meal_type: null,
     created_at: now,
     updated_at: now,
     deleted_at: null,
@@ -375,7 +418,7 @@ function logToLoggableSnapshot(log: FoodLog) {
   return snapshot;
 }
 
-export function logSavedMeal(savedMealId: string, date: LocalDate, meal: MealType | null): FoodLog[] {
+export function logSavedMeal(savedMealId: string, date: LocalDate): FoodLog[] {
   const state = getState();
   const saved = state.savedMeals[savedMealId];
   if (!saved) return [];
@@ -385,7 +428,6 @@ export function logSavedMeal(savedMealId: string, date: LocalDate, meal: MealTyp
   const created = addFoodLogs(
     items.map(item => ({
       food: { ...item, serving_description: '', serving_grams: null, barcode: null },
-      meal: meal ?? saved.default_meal_type,
       date,
       source: 'saved_meal' as const,
     })),

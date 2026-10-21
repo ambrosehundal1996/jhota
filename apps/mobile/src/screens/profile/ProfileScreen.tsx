@@ -1,7 +1,7 @@
 import { useNavigation } from '@react-navigation/native';
-import type { WeightUnit } from '@steady/domain';
+import type { WeightUnit } from '@jota/domain';
 import React, { useState } from 'react';
-import { Alert, Linking, Platform, StyleSheet, View } from 'react-native';
+import { Alert, Linking, StyleSheet, View } from 'react-native';
 import { AppText, ListGroup, ListRow, Screen, SectionLabel, SegmentedControl, showToast } from '../../components';
 import { appConfig } from '../../config';
 import { goalTitle } from '../../features/goalTypes';
@@ -49,7 +49,7 @@ export function ProfileScreen() {
     if (enabled && (await getPermissionStatus()) !== 'granted') {
       const result = await requestPermission();
       if (result !== 'granted') {
-        Alert.alert('Notifications are off', 'Turn on notifications for Steady in Settings to get reminders.', [
+        Alert.alert('Notifications are off', 'Turn on notifications for Jota in Settings to get reminders.', [
           { text: 'Not now', style: 'cancel' },
           { text: 'Open Settings', onPress: () => Linking.openSettings() },
         ]);
@@ -153,11 +153,11 @@ export function ProfileScreen() {
         ) : null}
       </ListGroup>
 
-      {billing && Platform.OS !== 'web' ? (
+      {billing ? (
         <>
           <SectionLabel>Subscription</SectionLabel>
           <ListGroup>
-            <ListRow title="Steady" value={subscriptionLabel(subscription)} />
+            <ListRow title="Jota" value={subscriptionLabel(subscription)} />
             <ListRow title={busy === 'restore' ? 'Restoring…' : 'Restore purchases'} onPress={restore} />
             <ListRow title="Manage subscription" onPress={() => Linking.openURL(subscriptions.manageSubscriptionsUrl())} last />
           </ListGroup>
@@ -175,7 +175,7 @@ export function ProfileScreen() {
             onPress={linkApple}
           />
         ) : null}
-        <ListRow title="Help & feedback" onPress={() => Linking.openURL(`mailto:${appConfig.supportEmail}?subject=Steady%20feedback`)} />
+        <ListRow title="Help & feedback" onPress={() => Linking.openURL(`mailto:${appConfig.supportEmail}?subject=Jota%20feedback`)} />
         <ListRow title="Privacy policy" onPress={() => Linking.openURL(appConfig.privacyUrl)} />
         <ListRow title="Terms of use" onPress={() => Linking.openURL(appConfig.termsUrl)} />
         <ListRow

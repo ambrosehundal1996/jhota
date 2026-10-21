@@ -12,8 +12,8 @@ type LookupState = { kind: 'idle' } | { kind: 'looking_up' } | { kind: 'not_foun
 
 /** Camera scanning is iOS-only; on web the barcode number is typed in. */
 export function BarcodeScreen({ navigation, route }: LogScreenProps<'Barcode'>) {
-  const { date, meal, src } = useLogContext(route.params);
-  const ctx = { date, meal, src };
+  const { date, src } = useLogContext(route.params);
+  const ctx = { date, src };
   const [code, setCode] = useState('');
   const [state, setState] = useState<LookupState>({ kind: 'idle' });
   const digits = code.replace(/\D/g, '');
@@ -51,7 +51,7 @@ export function BarcodeScreen({ navigation, route }: LogScreenProps<'Barcode'>) 
     >
       <SheetHeader title="Barcode" onClose={navigation.goBack} />
       <AppText variant="body" tone="secondary" style={styles.intro}>
-        Type the number under the barcode. Camera scanning is available in the Steady iOS app.
+        Type the number under the barcode. Camera scanning is available in the Jota iOS app.
       </AppText>
       <TextField
         label="Barcode number"

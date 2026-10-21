@@ -3,11 +3,9 @@ import {
   computeTotalsByDate,
   deriveRecentFoods,
   goalStatus,
-  MEAL_TYPES,
   type LocalDate,
-  type MealType,
   type ProteinRange,
-} from '@steady/domain';
+} from '@jota/domain';
 import type { DailyOverride, FoodLog } from '../types/models';
 import type { AppData } from './appStore';
 
@@ -41,22 +39,6 @@ export function selectDay(state: Pick<AppData, 'logs' | 'overrides' | 'profile'>
 
 export type DaySnapshot = ReturnType<typeof selectDay>;
 
-export interface MealGroup {
-  meal: MealType | 'other';
-  logs: FoodLog[];
-  protein: number;
-}
-
-export function groupByMeal(logs: FoodLog[]): MealGroup[] {
-  const groups: MealGroup[] = [];
-  for (const meal of [...MEAL_TYPES, 'other'] as const) {
-    const items = logs.filter(log => (log.meal_type ?? 'other') === meal);
-    if (!items.length) continue;
-    groups.push({ meal, logs: items, protein: Math.round(items.reduce((sum, l) => sum + l.protein_g, 0)) });
-  }
-  return groups;
-}
-
 export function selectTotalsByDate(state: Pick<AppData, 'logs' | 'overrides'>): Record<LocalDate, number> {
   return computeTotalsByDate(Object.values(state.logs), Object.values(state.overrides));
 }
@@ -89,11 +71,3 @@ export function findFavorite(
         : !f.external_food_id && !f.custom_food_id && f.food_name.toLowerCase() === food.food_name.toLowerCase(),
   );
 }
-
-export const MEAL_LABELS: Record<MealType | 'other', string> = {
-  breakfast: 'Breakfast',
-  lunch: 'Lunch',
-  dinner: 'Dinner',
-  snack: 'Snack',
-  other: 'Other',
-};

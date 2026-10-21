@@ -1,25 +1,25 @@
 #!/usr/bin/env ruby
-# Idempotently configures Steady.xcodeproj: bundle ids, iOS 17, entitlements, the
-# SharedWidgetStore native module, and the SteadyWidget WidgetKit extension.
+# Idempotently configures Jota.xcodeproj: bundle ids, iOS 17, entitlements, the
+# SharedWidgetStore native module, and the JotaWidget WidgetKit extension.
 # Usage: ruby ios/scripts/configure_xcode.rb   (then `pod install`)
 
 require 'xcodeproj'
 
 IOS_DIR = File.expand_path('..', __dir__)
-PROJECT_PATH = File.join(IOS_DIR, 'Steady.xcodeproj')
-APP_BUNDLE_ID = ENV.fetch('STEADY_BUNDLE_ID', 'app.steady.ios')
+PROJECT_PATH = File.join(IOS_DIR, 'Jota.xcodeproj')
+APP_BUNDLE_ID = ENV.fetch('JOTA_BUNDLE_ID', 'app.jota.ios')
 WIDGET_BUNDLE_ID = "#{APP_BUNDLE_ID}.widget"
 DEPLOYMENT_TARGET = '17.0'
-DEVELOPMENT_TEAM = ENV['STEADY_TEAM_ID']
+DEVELOPMENT_TEAM = ENV['JOTA_TEAM_ID']
 
 project = Xcodeproj::Project.open(PROJECT_PATH)
-app = project.targets.find { |t| t.name == 'Steady' } or abort('Steady target not found')
+app = project.targets.find { |t| t.name == 'Jota' } or abort('Jota target not found')
 
 project.build_configurations.each do |config|
   config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = DEPLOYMENT_TARGET
 end
 
-# The RN template's "Steady" group has no folder path; its files carry "Steady/..." paths.
+# The RN template's "Jota" group has no folder path; its files carry "Jota/..." paths.
 def ensure_file(group, name, prefix = nil)
   path = prefix ? "#{prefix}/#{name}" : name
   stale = group.files.select { |f| f.display_name == name && f.path != path }
@@ -31,41 +31,42 @@ def ensure_file(group, name, prefix = nil)
 end
 
 # --- App target -------------------------------------------------------------
-app_group = project.main_group.find_subpath('Steady', false) or abort('Steady group not found')
-app_prefix = app_group.path.nil? ? 'Steady' : nil
-%w[SharedWidgetStore.swift SharedWidgetStore.m].each do |name|
+app_group = project.main_group.find_subpath('Jota', false) or abort('Jota group not found')
+app_prefix = app_group.path.nil? ? 'Jota' : nil
+%w[SharedWidgetStore.swift SharedWidgetStore.m Haptics.swift Haptics.m].each do |name|
   ref = ensure_file(app_group, name, app_prefix)
   app.source_build_phase.add_file_reference(ref, true)
 end
-ensure_file(app_group, 'Steady.entitlements', app_prefix)
-ensure_file(app_group, 'Steady-Bridging-Header.h', app_prefix)
+ensure_file(app_group, 'Jota.entitlements', app_prefix)
+ensure_file(app_group, 'Jota-Bridging-Header.h', app_prefix)
 
 app.build_configurations.each do |config|
   s = config.build_settings
   s['PRODUCT_BUNDLE_IDENTIFIER'] = APP_BUNDLE_ID
   s['IPHONEOS_DEPLOYMENT_TARGET'] = DEPLOYMENT_TARGET
-  s['CODE_SIGN_ENTITLEMENTS'] = 'Steady/Steady.entitlements'
-  s['SWIFT_OBJC_BRIDGING_HEADER'] = 'Steady/Steady-Bridging-Header.h'
+  s['CODE_SIGN_ENTITLEMENTS'] = 'Jota/Jota.entitlements'
+  s['SWIFT_OBJC_BRIDGING_HEADER'] = 'Jota/Jota-Bridging-Header.h'
   s['TARGETED_DEVICE_FAMILY'] = '1'
   s['DEVELOPMENT_TEAM'] = DEVELOPMENT_TEAM if DEVELOPMENT_TEAM
 end
 
 # --- Widget extension -------------------------------------------------------
-widget = project.targets.find { |t| t.name == 'SteadyWidget' }
+widget = project.targets.find { |t| t.name == 'JotaWidget' }
 unless widget
-  widget = project.new_target(:app_extension, 'SteadyWidget', :ios, DEPLOYMENT_TARGET, nil, :swift)
+  widget = project.new_target(:app_extension, 'JotaWidget', :ios, DEPLOYMENT_TARGET, nil, :swift)
 end
 
-widget_group = project.main_group.find_subpath('SteadyWidget', false) ||
-               project.main_group.new_group('SteadyWidget', 'SteadyWidget')
-%w[SteadyWidget.swift WidgetSnapshot.swift].each do |name|
+widget_group = project.main_group.find_subpath('JotaWidget', false) ||
+               project.main_group.new_group('JotaWidget', 'JotaWidget')
+%w[JotaWidget.swift WidgetSnapshot.swift ProteinActivityAttributes.swift].each do |name|
   ref = ensure_file(widget_group, name)
   widget.source_build_phase.add_file_reference(ref, true)
+  app.source_build_phase.add_file_reference(ref, true) if name != 'JotaWidget.swift'
 end
 ensure_file(widget_group, 'Info.plist')
-ensure_file(widget_group, 'SteadyWidget.entitlements')
+ensure_file(widget_group, 'JotaWidget.entitlements')
 
-%w[WidgetKit SwiftUI].each do |framework|
+%w[WidgetKit SwiftUI AppIntents ActivityKit].each do |framework|
   next if widget.frameworks_build_phase.files_references.any? { |f| f.path&.end_with?("#{framework}.framework") }
   widget.add_system_framework(framework)
 end
@@ -74,8 +75,8 @@ widget.build_configurations.each do |config|
   s = config.build_settings
   s['PRODUCT_NAME'] = '$(TARGET_NAME)'
   s['PRODUCT_BUNDLE_IDENTIFIER'] = WIDGET_BUNDLE_ID
-  s['INFOPLIST_FILE'] = 'SteadyWidget/Info.plist'
-  s['CODE_SIGN_ENTITLEMENTS'] = 'SteadyWidget/SteadyWidget.entitlements'
+  s['INFOPLIST_FILE'] = 'JotaWidget/Info.plist'
+  s['CODE_SIGN_ENTITLEMENTS'] = 'JotaWidget/JotaWidget.entitlements'
   s['IPHONEOS_DEPLOYMENT_TARGET'] = DEPLOYMENT_TARGET
   s['SWIFT_VERSION'] = '5.0'
   s['TARGETED_DEVICE_FAMILY'] = '1'

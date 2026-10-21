@@ -1,14 +1,14 @@
-import { useFocusEffect, useNavigation } from '@react-navigation/native';
-import { computeGoalStreak, defaultMealForTime, type RecentFood } from '@steady/domain';
-import React, { useCallback, useMemo } from 'react';
+import { useNavigation } from '@react-navigation/native';
+import { computeGoalStreak, type RecentFood } from '@jota/domain';
+import React, { useMemo } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import {
   AppText,
-  Button,
   Chip,
+  CountUpText,
   EmptyState,
   Icon,
-  MethodTile,
+  LogDeltaChip,
   OfflineBanner,
   ProgressRing,
   Screen,
@@ -21,10 +21,9 @@ import { useDay, useRecents, useTotalsByDate } from '../../hooks/useAppData';
 import { useLocalToday } from '../../hooks/useLocalToday';
 import { openLog } from '../../navigation/openLog';
 import { useAppStore } from '../../state/appStore';
-import { groupByMeal } from '../../state/selectors';
-import { colors, radii, spacing } from '../../theme';
+import { colors, radii, shadows, spacing } from '../../theme';
 import { formatTodayHeader, rangeLabel } from '../../utils/format';
-import { MealGroupCard } from './MealGroupCard';
+import { LoggedFoodsCard } from './LoggedFoodsCard';
 import { NotificationPromptCard } from './NotificationPromptCard';
 import { OverrideBanner } from './OverrideBanner';
 
@@ -34,23 +33,18 @@ export function TodayScreen() {
   const day = useDay(today);
   const totals = useTotalsByDate();
   const recents = useRecents(10);
-  const pendingCelebration = useAppStore(s => s.flags.pendingCelebrationDate);
+  const celebrating = useAppStore(s => s.flags.pendingCelebrationDate === today);
   const offline = useIsOffline();
 
   const streak = useMemo(() => computeGoalStreak(totals, today, day.range.min), [totals, today, day.range.min]);
-  const groups = useMemo(() => groupByMeal(day.logs), [day.logs]);
   const hasAnything = day.logs.length > 0 || !!day.override;
   const total = Math.round(day.total.total);
   const ctx = { date: today, src: 'today' as const };
-
-  useFocusEffect(
-    useCallback(() => {
-      if (pendingCelebration === today) navigation.navigate('GoalReached');
-    }, [pendingCelebration, today, navigation]),
-  );
+  const over = Math.round(day.total.total - day.range.min);
 
   const logAgain = (recent: RecentFood) => {
-    const log = relogRecent(recent, today, recent.lastMeal ?? defaultMealForTime(new Date()));
+    const log = relogRecent(recent, today);
+    if (!log) return;
     showToast(`Added ${recent.food_name} · ${Math.round(log.protein_g)}g`, { label: 'Undo', onPress: () => undoLogs([log.id]) });
   };
 
@@ -84,19 +78,32 @@ export function TodayScreen() {
       {offline ? <OfflineBanner /> : null}
 
       <View style={styles.hero}>
-        <ProgressRing progress={day.status.progress} size={232} strokeWidth={16} accessibilityLabel={ringLabel}>
-          <AppText variant="display" testID="today-total">
-            {total}
-            <AppText variant="h2" tone="secondary">
-              g
+        <View>
+          <LogDeltaChip />
+          <ProgressRing
+            progress={day.status.progress}
+            size={232}
+            strokeWidth={16}
+            pulseKey={celebrating ? today : null}
+            accessibilityLabel={ringLabel}
+          >
+            <View style={styles.totalRow}>
+              <CountUpText variant="display" value={total} testID="today-total" />
+              <AppText variant="h2" tone="secondary">
+                g
+              </AppText>
+            </View>
+            <AppText variant="caption" tone="tertiary">
+              {day.total.source === 'override' ? 'total set' : 'protein today'}
             </AppText>
-          </AppText>
-          <AppText variant="caption" tone="tertiary">
-            {day.total.source === 'override' ? 'total set' : 'protein today'}
-          </AppText>
-        </ProgressRing>
+          </ProgressRing>
+        </View>
 
-        {day.status.reached ? (
+        {over > 0 && day.status.reached ? (
+          <AppText variant="h3" tone="secondary" style={styles.status}>
+            +{over}g over
+          </AppText>
+        ) : day.status.reached ? (
           <View style={styles.reached} accessibilityLiveRegion="polite">
             <Icon name="check" size={18} color={colors.accentText} strokeWidth={2.4} />
             <AppText variant="h3" tone="accent">
@@ -110,13 +117,19 @@ export function TodayScreen() {
         )}
         <AppText variant="caption" tone="secondary">
           Goal range: {rangeLabel(day.range)}
-          {day.status.aboveMax ? ' · above your range is fine' : ''}
         </AppText>
       </View>
 
       <View style={styles.actions}>
-        <Button label="Log food" icon="plus" variant="filled" onPress={() => openLog(navigation, 'LogHome', ctx)} style={styles.flex} testID="log-food" />
-        <Button label="Quick add" icon="bolt" onPress={() => openLog(navigation, 'QuickAdd', ctx)} style={styles.flex} testID="quick-add" />
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Log food"
+          onPress={() => openLog(navigation, 'LogHome', ctx)}
+          style={({ pressed }) => [styles.logButton, pressed && styles.logButtonPressed]}
+          testID="log-food"
+        >
+          <Icon name="plus" size={40} color={colors.white} strokeWidth={2.4} />
+        </Pressable>
       </View>
 
       {recents.length > 0 ? (
@@ -159,29 +172,15 @@ export function TodayScreen() {
           />
         ) : null}
 
-        {groups.map(group => (
-          <MealGroupCard
-            key={group.meal}
-            group={group}
-            muted={!!day.override}
-            onPressLog={log => openLog(navigation, 'FoodDetail', { mode: 'edit', logId: log.id })}
-          />
-        ))}
+        <LoggedFoodsCard
+          logs={day.logs}
+          muted={!!day.override}
+          onPressLog={log => openLog(navigation, 'FoodDetail', { mode: 'edit', logId: log.id })}
+        />
       </View>
 
       {!hasAnything ? (
-        <EmptyState title="Nothing logged yet" message="Start with whatever is easiest. A rough estimate still counts.">
-          <View style={styles.tiles}>
-            <MethodTile label="Search" icon="search" onPress={() => openLog(navigation, 'Search', ctx)} />
-            <MethodTile
-              label="AI photo"
-              icon="camera"
-              onPress={() => openLog(navigation, 'Photo', ctx)}
-            />
-            <MethodTile label="Quick add" icon="bolt" onPress={() => openLog(navigation, 'QuickAdd', ctx)} />
-            <MethodTile label="Set total" icon="sigma" onPress={() => openLog(navigation, 'SetTotal', ctx)} />
-          </View>
-        </EmptyState>
+        <EmptyState title="Nothing logged yet" message="Tap + to log. A rough estimate still counts." />
       ) : !day.override ? (
         <Pressable accessibilityRole="button" onPress={() => openLog(navigation, 'SetTotal', ctx)} style={styles.setTotal}>
           <AppText variant="caption" tone="tertiary" align="center">
@@ -202,10 +201,20 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   hero: { alignItems: 'center', gap: spacing.xs, marginTop: spacing.lg },
+  totalRow: { flexDirection: 'row', alignItems: 'baseline' },
   status: { marginTop: spacing.lg },
   reached: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginTop: spacing.lg },
-  actions: { flexDirection: 'row', gap: spacing.md, marginTop: spacing.xl },
-  flex: { flex: 1 },
+  actions: { marginTop: spacing.xl, alignItems: 'center' },
+  logButton: {
+    width: 84,
+    height: 84,
+    borderRadius: 42,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.accent,
+    ...shadows.button,
+  },
+  logButtonPressed: { backgroundColor: colors.accentPressed, transform: [{ scale: 0.96 }] },
   recentsScroll: { marginHorizontal: -spacing.xl },
   recents: { gap: spacing.sm, paddingHorizontal: spacing.xl },
   recent: {
@@ -219,6 +228,5 @@ const styles = StyleSheet.create({
   recentBottom: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   pressed: { opacity: 0.7 },
   stack: { gap: spacing.md, marginTop: spacing.xl },
-  tiles: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, justifyContent: 'center' },
   setTotal: { paddingVertical: spacing.lg },
 });

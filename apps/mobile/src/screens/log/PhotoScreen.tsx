@@ -2,7 +2,17 @@ import React, { useEffect } from 'react';
 import { ActivityIndicator, Alert, Image, Linking, StyleSheet, TextInput, View } from 'react-native';
 import { launchCamera, launchImageLibrary, type ImagePickerResponse } from 'react-native-image-picker';
 import { AppText, Button, Card, EmptyState, Icon, Screen, SheetHeader, showToast } from '../../components';
-import { discardDraft, NOT_FOOD, runAnalysis, setDraftContext, startDraft } from '../../features/ai/draft';
+import {
+  abandonClarification,
+  acceptRoughEstimate,
+  discardDraft,
+  draftTotal,
+  hasNewContext,
+  NOT_FOOD,
+  runAnalysis,
+  setDraftContext,
+  startDraft,
+} from '../../features/ai/draft';
 import type { LogScreenProps } from '../../navigation/types';
 import { useAppStore } from '../../state/appStore';
 import { colors, radii, spacing, typography } from '../../theme';
@@ -11,7 +21,7 @@ import { closeLog, useLogContext } from './useLogContext';
 const PICKER_OPTIONS = { mediaType: 'photo', maxWidth: 1280, maxHeight: 1280, quality: 0.7, includeBase64: false } as const;
 
 export function PhotoScreen({ navigation, route }: LogScreenProps<'Photo'>) {
-  const { date, meal } = useLogContext(route.params);
+  const { date } = useLogContext(route.params);
   const draft = useAppStore(s => s.aiDraft);
   const busy = draft?.status === 'uploading' || draft?.status === 'analyzing';
 
@@ -22,7 +32,7 @@ export function PhotoScreen({ navigation, route }: LogScreenProps<'Photo'>) {
   const handlePick = (response: ImagePickerResponse) => {
     if (response.didCancel) return;
     if (response.errorCode === 'permission') {
-      Alert.alert('Allow access to take meal photos', 'You can turn this on for Steady in Settings.', [
+      Alert.alert('Allow access to take meal photos', 'You can turn this on for Jota in Settings.', [
         { text: 'Not now', style: 'cancel' },
         { text: 'Open Settings', onPress: () => Linking.openSettings() },
       ]);
@@ -37,7 +47,7 @@ export function PhotoScreen({ navigation, route }: LogScreenProps<'Photo'>) {
       showToast('We couldn’t open that photo. Try another one.');
       return;
     }
-    startDraft(uri, date, meal);
+    startDraft(uri, date);
   };
 
   const takePhoto = () => launchCamera({ ...PICKER_OPTIONS, saveToPhotos: false, cameraType: 'back' }, handlePick);
@@ -66,6 +76,12 @@ export function PhotoScreen({ navigation, route }: LogScreenProps<'Photo'>) {
 
   const notFood = draft.status === 'failed' && draft.error === NOT_FOOD;
   const failed = draft.status === 'failed' && !notFood;
+  const clarify = draft.status === 'clarify';
+  const roughTotal = Math.round(draftTotal(draft.items));
+  const enterManually = () => {
+    abandonClarification();
+    navigation.replace('QuickAdd', { date });
+  };
 
   return (
     <Screen
@@ -75,12 +91,26 @@ export function PhotoScreen({ navigation, route }: LogScreenProps<'Photo'>) {
         notFood ? (
           <>
             <Button label="Try another photo" variant="filled" onPress={() => { discardDraft(); choosePhoto(); }} />
-            <Button label="Quick add instead" variant="ghost" onPress={() => { discardDraft(); navigation.replace('QuickAdd', { date, meal }); }} />
+            <Button label="Quick add instead" variant="ghost" onPress={() => { discardDraft(); navigation.replace('QuickAdd', { date }); }} />
+          </>
+        ) : clarify ? (
+          <>
+            <Button
+              label="Re-estimate with details"
+              variant="filled"
+              disabled={!hasNewContext(draft)}
+              onPress={() => void runAnalysis()}
+              testID="clarify-retry"
+            />
+            {draft.items.length ? (
+              <Button label={`Use rough estimate · ${roughTotal}g`} variant="secondary" onPress={acceptRoughEstimate} />
+            ) : null}
+            <Button label="Enter protein manually" variant="ghost" onPress={enterManually} />
           </>
         ) : failed ? (
           <>
             <Button label="Retry" variant="filled" onPress={() => void runAnalysis()} testID="retry-analysis" />
-            <Button label="Quick add instead" variant="ghost" onPress={() => { discardDraft(); navigation.replace('QuickAdd', { date, meal }); }} />
+            <Button label="Quick add instead" variant="ghost" onPress={() => { discardDraft(); navigation.replace('QuickAdd', { date }); }} />
           </>
         ) : (
           <Button label={busy ? 'Estimating…' : 'Estimate protein'} variant="filled" loading={busy} disabled={busy} onPress={() => void runAnalysis()} testID="estimate" />
@@ -121,12 +151,21 @@ export function PhotoScreen({ navigation, route }: LogScreenProps<'Photo'>) {
         </Card>
       ) : (
         <View style={styles.context}>
-          <AppText variant="bodyStrong">Anything the photo can’t show? (optional)</AppText>
+          {clarify ? (
+            <Card style={styles.clarify} testID="clarification">
+              <AppText variant="bodyStrong">{draft.clarificationQuestion}</AppText>
+              <AppText variant="caption" tone="secondary">
+                {draft.error ?? 'Add a quick detail below and we’ll re-estimate.'}
+              </AppText>
+            </Card>
+          ) : (
+            <AppText variant="bodyStrong">Anything the photo can’t show? (optional)</AppText>
+          )}
           <TextInput
             value={draft.context}
             onChangeText={setDraftContext}
             editable={!busy}
-            placeholder="e.g. 8 oz chicken, protein pasta, double meat"
+            placeholder={clarify ? 'e.g. it’s paneer, about 150g' : 'e.g. 8 oz chicken, protein pasta, double meat'}
             placeholderTextColor={colors.textTertiary}
             style={styles.input}
             multiline
@@ -155,6 +194,7 @@ const styles = StyleSheet.create({
   message: { marginTop: spacing.lg, gap: spacing.xs },
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   context: { marginTop: spacing.lg, gap: spacing.sm },
+  clarify: { gap: spacing.xs },
   input: {
     ...typography.body,
     color: colors.text,

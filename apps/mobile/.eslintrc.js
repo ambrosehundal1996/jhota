@@ -1,7 +1,7 @@
 module.exports = {
   root: true,
   extends: '@react-native',
-  ignorePatterns: ['ios/', 'android/', 'node_modules/', 'coverage/'],
+  ignorePatterns: ['ios/', 'android/', 'node_modules/', 'coverage/', 'web-build/'],
   rules: {
     // `void promise` marks intentionally un-awaited work.
     'no-void': 'off',
@@ -16,5 +16,6 @@ module.exports = {
       },
     },
     { files: ['src/utils/id.ts'], rules: { 'no-bitwise': 'off' } },
+    { files: ['index.web.js'], env: { browser: true }, rules: { 'no-alert': 'off' } },
   ],
 };

@@ -2,7 +2,7 @@ module.exports = {
   preset: '@react-native/jest-preset',
   setupFiles: ['<rootDir>/jest.setup.js'],
   moduleNameMapper: {
-    '^@steady/domain$': '<rootDir>/../../packages/domain/src/index.ts',
+    '^@jota/domain$': '<rootDir>/../../packages/domain/src/index.ts',
     '^react-native-mmkv$': '<rootDir>/test/mocks/mmkv.ts',
     '^react-native-config$': '<rootDir>/test/mocks/config.ts',
     '^react-native-get-random-values$': '<rootDir>/test/mocks/empty.ts',

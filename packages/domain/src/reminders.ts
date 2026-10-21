@@ -3,23 +3,32 @@ import type { LocalDate } from './types';
 
 export interface ReminderPreferences {
   enabled: boolean;
+  morning9am: boolean;
   zeroLog2pm: boolean;
-  zeroLog7pm: boolean;
+  remaining4pm: boolean;
+  remaining7pm: boolean;
+  zeroLog8pm: boolean;
   progressReminder: boolean;
 }
 
 export const DEFAULT_REMINDER_PREFERENCES: ReminderPreferences = {
   enabled: true,
+  morning9am: true,
   zeroLog2pm: true,
-  zeroLog7pm: false,
+  remaining4pm: true,
+  remaining7pm: true,
+  zeroLog8pm: true,
   progressReminder: false,
 };
 
-export type ReminderKind = 'zero_log_2pm' | 'zero_log_7pm' | 'progress';
+export type ReminderKind = 'morning_9am' | 'zero_log_2pm' | 'remaining_4pm' | 'remaining_7pm' | 'zero_log_8pm' | 'progress';
 
 export const REMINDER_TIMES: Record<ReminderKind, { hour: number; minute: number }> = {
+  morning_9am: { hour: 9, minute: 0 },
   zero_log_2pm: { hour: 14, minute: 0 },
-  zero_log_7pm: { hour: 19, minute: 0 },
+  remaining_4pm: { hour: 16, minute: 0 },
+  remaining_7pm: { hour: 19, minute: 0 },
+  zero_log_8pm: { hour: 20, minute: 0 },
   progress: { hour: 20, minute: 0 },
 };
 
@@ -36,13 +45,23 @@ export interface PlannedReminder {
 export function isZeroLogReminderEligible(args: {
   totalToday: number;
   prefs: ReminderPreferences;
-  kind: 'zero_log_2pm' | 'zero_log_7pm';
+  kind: 'morning_9am' | 'zero_log_2pm' | 'zero_log_8pm';
 }): boolean {
   const { totalToday, prefs, kind } = args;
-  if (!prefs.enabled) return false;
-  if (kind === 'zero_log_2pm' && !prefs.zeroLog2pm) return false;
-  if (kind === 'zero_log_7pm' && !prefs.zeroLog7pm) return false;
-  return totalToday === 0;
+  if (!prefs.enabled || totalToday !== 0) return false;
+  if (kind === 'morning_9am') return prefs.morning9am;
+  return kind === 'zero_log_2pm' ? prefs.zeroLog2pm : prefs.zeroLog8pm;
+}
+
+export function isRemainingReminderEligible(args: {
+  totalToday: number;
+  goalMin: number;
+  prefs: ReminderPreferences;
+  kind: 'remaining_4pm' | 'remaining_7pm';
+}): boolean {
+  const { totalToday, goalMin, prefs, kind } = args;
+  if (!prefs.enabled || goalMin <= 0 || totalToday >= goalMin) return false;
+  return kind === 'remaining_4pm' ? prefs.remaining4pm : prefs.remaining7pm;
 }
 
 export function isProgressReminderEligible(args: {
@@ -56,12 +75,23 @@ export function isProgressReminderEligible(args: {
 
 export function reminderCopy(kind: ReminderKind, toGoal = 0): { title: string; body: string } {
   switch (kind) {
-    case 'zero_log_2pm':
-      return { title: 'Nothing logged yet today.', body: 'Even a quick estimate keeps you on track.' };
-    case 'zero_log_7pm':
+    case 'morning_9am':
       return {
-        title: 'Still time to log today.',
-        body: 'Set a rough total in a few seconds to keep your history consistent.',
+        title: 'New day, fresh start',
+        body: toGoal > 0 ? `Today’s goal is ${toGoal}g. Log as you go.` : 'Log as you go today.',
+      };
+    case 'zero_log_2pm':
+      return { title: 'Nothing logged yet today.', body: 'Takes about 5 seconds to log.' };
+    case 'remaining_4pm':
+    case 'remaining_7pm':
+      return {
+        title: `${toGoal}g of protein left`,
+        body: 'That’s how much you still have to eat today.',
+      };
+    case 'zero_log_8pm':
+      return {
+        title: 'Quick estimate for today?',
+        body: 'Skip the food-by-food. Set your protein total in one step.',
       };
     case 'progress':
       return toGoal <= 25
@@ -76,11 +106,16 @@ function atTime(date: LocalDate, kind: ReminderKind): Date {
   return new Date(y ?? 1970, (m ?? 1) - 1, d ?? 1, hour, minute, 0, 0);
 }
 
+function gramsLeft(goalMin: number, total: number): number {
+  return Math.max(0, Math.ceil(goalMin - total));
+}
+
 /**
  * Plans the full rolling schedule of local notifications. iOS cannot run app code at 2 PM,
  * so the app re-plans whenever today's total changes or the app foregrounds: future days
  * always get zero-log reminders (nothing can be logged there yet), and today's are dropped
- * as soon as anything is recorded.
+ * as soon as anything is recorded. Remaining-protein reminders keep a fresh gram count
+ * because they are cancelled and rescheduled on every plan.
  */
 export function planReminders(args: {
   now: Date;
@@ -97,7 +132,9 @@ export function planReminders(args: {
   for (let i = 0; i < days; i++) {
     const date = addDays(today, i);
     const totalForDay = i === 0 ? totalToday : 0;
-    for (const kind of ['zero_log_2pm', 'zero_log_7pm'] as const) {
+    const toGoal = gramsLeft(goalMin, totalForDay);
+
+    for (const kind of ['morning_9am', 'zero_log_2pm', 'zero_log_8pm'] as const) {
       if (!isZeroLogReminderEligible({ totalToday: totalForDay, prefs, kind })) continue;
       const fireAt = atTime(date, kind);
       if (fireAt <= now) continue;
@@ -106,8 +143,22 @@ export function planReminders(args: {
         kind,
         date,
         fireAt,
-        ...reminderCopy(kind),
-        link: 'steady://log?src=notification',
+        ...reminderCopy(kind, toGoal),
+        link: kind === 'zero_log_8pm' ? 'jota://log/set-total?src=notification' : 'jota://log?src=notification',
+      });
+    }
+
+    for (const kind of ['remaining_4pm', 'remaining_7pm'] as const) {
+      if (!isRemainingReminderEligible({ totalToday: totalForDay, goalMin, prefs, kind })) continue;
+      const fireAt = atTime(date, kind);
+      if (fireAt <= now) continue;
+      planned.push({
+        id: `${kind}-${date}`,
+        kind,
+        date,
+        fireAt,
+        ...reminderCopy(kind, toGoal),
+        link: 'jota://log?src=notification',
       });
     }
   }
@@ -115,14 +166,13 @@ export function planReminders(args: {
   if (isProgressReminderEligible({ totalToday, goalMin, prefs })) {
     const fireAt = atTime(today, 'progress');
     if (fireAt > now) {
-      const toGoal = Math.ceil(goalMin - totalToday);
       planned.push({
         id: `progress-${today}`,
         kind: 'progress',
         date: today,
         fireAt,
-        ...reminderCopy('progress', toGoal),
-        link: 'steady://log?src=notification',
+        ...reminderCopy('progress', gramsLeft(goalMin, totalToday)),
+        link: 'jota://log?src=notification',
       });
     }
   }

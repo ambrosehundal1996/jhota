@@ -1,4 +1,4 @@
-import type { LocalDate } from '@steady/domain';
+import type { LocalDate } from '@jota/domain';
 import { useMemo } from 'react';
 import { useAppStore } from '../state/appStore';
 import {

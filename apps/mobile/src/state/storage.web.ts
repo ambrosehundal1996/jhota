@@ -1,8 +1,15 @@
 import type { StateStorage } from 'zustand/middleware';
 
-const PREFIX = 'steady:';
+interface WebStorage {
+  getItem(key: string): string | null;
+  setItem(key: string, value: string): void;
+  removeItem(key: string): void;
+}
+declare const window: { localStorage: WebStorage } | undefined;
 
-function local(): Storage | null {
+const PREFIX = 'jota:';
+
+function local(): WebStorage | null {
   try {
     return typeof window !== 'undefined' ? window.localStorage : null;
   } catch {

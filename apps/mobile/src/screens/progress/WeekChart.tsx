@@ -1,4 +1,4 @@
-import type { LocalDate, ProgressDay, ProteinRange } from '@steady/domain';
+import type { LocalDate, ProgressDay, ProteinRange } from '@jota/domain';
 import React from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { AppText, Icon } from '../../components';

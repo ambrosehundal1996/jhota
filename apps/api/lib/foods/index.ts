@@ -1,4 +1,4 @@
-import type { NormalizedFood } from '@steady/domain';
+import type { NormalizedFood } from '@jota/domain';
 import { TtlCache } from '../cache.js';
 import { HttpError } from '../env.js';
 import { openFoodFactsProvider } from './openFoodFacts.js';

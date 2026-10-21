@@ -1,4 +1,4 @@
-import { formatRange, parseLocalDate, type LocalDate, type ProteinRange } from '@steady/domain';
+import { formatRange, parseLocalDate, type LocalDate, type ProteinRange } from '@jota/domain';
 
 export const grams = (value: number) => `${Math.round(value)}g`;
 
@@ -27,6 +27,11 @@ export function formatShortDay(date: LocalDate): string {
 
 export function formatTodayHeader(date: LocalDate): string {
   return parseLocalDate(date).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+}
+
+/** "8:05 AM" in the device's local time zone. */
+export function formatLogTime(iso: string): string {
+  return new Date(iso).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
 }
 
 export function weekdayInitial(date: LocalDate): string {

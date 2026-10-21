@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { StyleSheet, TextInput, View } from 'react-native';
-import { AppText, Button, Keypad, MealSelector, Screen, SheetHeader, showToast } from '../../components';
+import { AppText, Button, Keypad, Screen, SheetHeader, showToast } from '../../components';
 import { quickAdd, undoLogs } from '../../features/logging/actions';
 import type { LogScreenProps } from '../../navigation/types';
 import { colors, radii, spacing, typography } from '../../theme';
@@ -8,7 +8,7 @@ import { formatShortDay } from '../../utils/format';
 import { closeLog, useLogContext } from './useLogContext';
 
 export function QuickAddScreen({ navigation, route }: LogScreenProps<'QuickAdd'>) {
-  const { date, isToday, meal, setMeal } = useLogContext(route.params);
+  const { date, isToday } = useLogContext(route.params);
   const [value, setValue] = useState('');
   const [name, setName] = useState('');
   const grams = Number(value);
@@ -16,7 +16,8 @@ export function QuickAddScreen({ navigation, route }: LogScreenProps<'QuickAdd'>
 
   const add = () => {
     if (!valid) return;
-    const log = quickAdd({ grams, name, meal, date });
+    const log = quickAdd({ grams, name, date });
+    if (!log) return;
     showToast(`Added ${grams}g${isToday ? '' : ` to ${formatShortDay(date)}`}`, { label: 'Undo', onPress: () => undoLogs([log.id]) });
     closeLog(navigation);
   };
@@ -50,9 +51,6 @@ export function QuickAddScreen({ navigation, route }: LogScreenProps<'QuickAdd'>
         returnKeyType="done"
         accessibilityLabel="Entry name, optional"
       />
-      <View style={styles.meal}>
-        <MealSelector value={meal} onChange={setMeal} />
-      </View>
       <View style={styles.keypad}>
         <Keypad value={value} onChange={setValue} />
       </View>
@@ -72,6 +70,5 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     borderRadius: radii.sm,
   },
-  meal: { marginTop: spacing.md },
   keypad: { flex: 1, justifyContent: 'flex-end', paddingBottom: spacing.sm },
 });

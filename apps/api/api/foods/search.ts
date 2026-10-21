@@ -1,7 +1,7 @@
-import type { FoodSearchResponse } from '@steady/domain';
+import type { FoodSearchResponse } from '@jota/domain';
 import { requireUser } from '../../lib/auth.js';
 import { searchFoods } from '../../lib/foods/index.js';
-import { errorResponse, handle, json } from '../../lib/http.js';
+import { errorResponse, handle, json, preflight } from '../../lib/http.js';
 import { rateLimit } from '../../lib/rateLimit.js';
 
 export const GET = handle(async request => {
@@ -15,3 +15,5 @@ export const GET = handle(async request => {
   const body: FoodSearchResponse = { query, results };
   return json(body);
 });
+
+export const OPTIONS = preflight;

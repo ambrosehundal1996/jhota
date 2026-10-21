@@ -23,7 +23,7 @@ function posthogAdapter(apiKey: string, host: string): AnalyticsAdapter {
     }).catch(() => undefined);
   return {
     track: (event, props, distinctId) =>
-      void send({ event, distinct_id: distinctId, properties: { ...props, $lib: 'steady-ios' }, timestamp: new Date().toISOString() }),
+      void send({ event, distinct_id: distinctId, properties: { ...props, $lib: 'jota-ios' }, timestamp: new Date().toISOString() }),
     identify: (distinctId, traits) => void send({ event: '$identify', distinct_id: distinctId, properties: { $set: traits } }),
   };
 }

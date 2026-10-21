@@ -77,7 +77,7 @@ module.exports = (_env, argv) => {
       extensions: ['.web.tsx', '.web.ts', '.web.js', '.tsx', '.ts', '.js', '.jsx', '.json'],
       alias: {
         'react-native$': 'react-native-web',
-        '@steady/domain': path.join(workspaceRoot, 'packages/domain/src/index.ts'),
+        '@jota/domain': path.join(workspaceRoot, 'packages/domain/src/index.ts'),
         'react-native-get-random-values': false,
         'react-native-url-polyfill/auto': false,
         ...Object.fromEntries(nativeOnly.map(name => [name, false])),
@@ -117,7 +117,7 @@ module.exports = (_env, argv) => {
       new webpack.DefinePlugin({
         __DEV__: JSON.stringify(isDev),
         'process.env.NODE_ENV': JSON.stringify(isDev ? 'development' : 'production'),
-        __STEADY_PUBLIC_ENV__: JSON.stringify(readPublicEnv()),
+        __JOTA_PUBLIC_ENV__: JSON.stringify(readPublicEnv()),
       }),
     ],
     devServer: {

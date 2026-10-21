@@ -1,11 +1,11 @@
-project_id = "steady"
+project_id = "jota"
 
 [api]
 schemas = ["public", "storage"]
 
 [auth]
-site_url = "steady://"
-additional_redirect_urls = ["steady://auth-callback"]
+site_url = "jota://"
+additional_redirect_urls = ["jota://auth-callback"]
 enable_anonymous_sign_ins = true
 enable_manual_linking = true
 

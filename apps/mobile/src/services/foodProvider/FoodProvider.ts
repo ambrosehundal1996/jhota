@@ -1,10 +1,10 @@
-import type { FoodSearchResponse, NormalizedFood } from '@steady/domain';
+import type { FoodSearchResponse, NormalizedFood } from '@jota/domain';
 import type { CustomFood, LoggableFood } from '../../types/models';
 import { apiFetch, ApiError } from '../api/client';
 
 /**
  * Client-side food data contract. Screens depend only on this interface; the default
- * implementation proxies to the Steady API, which owns third-party provider keys.
+ * implementation proxies to the Jota API, which owns third-party provider keys.
  */
 export interface FoodProvider {
   searchFoods(query: string, signal?: AbortSignal): Promise<NormalizedFood[]>;

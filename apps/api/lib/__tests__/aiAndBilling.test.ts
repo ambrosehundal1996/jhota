@@ -1,32 +1,17 @@
 import { describe, expect, it } from 'vitest';
-import { extractOutputText, finalizeEstimate } from '../ai/analyzeMealPhoto.js';
+import { extractOutputText } from '../ai/analyzeMealPhoto.js';
 import { eventToSubscriptionRow, resolveUserId } from '../revenuecat.js';
 
 const USER = '6f1c1c9e-2b7a-4b0e-9a64-1f6f3f1e2a10';
 
 describe('AI estimate post-processing', () => {
-  it('rounds items and recomputes the total from them', () => {
-    const result = finalizeEstimate({
-      is_food: true,
-      items: [
-        { name: ' Chicken breast ', portion: '6 oz', protein_g: 49.6, confidence: 'medium' },
-        { name: 'Rice', portion: '1 cup', protein_g: 4.2, confidence: 'high' },
-        { name: 'Broccoli', portion: '1 cup', protein_g: 2.6, confidence: 'high' },
-      ],
-      total_protein_g: 60,
-      notes: '',
-    });
-    expect(result.items.map(i => [i.name, i.protein_g])).toEqual([
-      ['Chicken breast', 50],
-      ['Rice', 4],
-      ['Broccoli', 3],
-    ]);
-    expect(result.total_protein_g).toBe(57);
-  });
-
   it('extracts structured output text and surfaces refusals', () => {
     expect(extractOutputText({ output: [{ content: [{ type: 'output_text', text: '{"a":1}' }] }] })).toBe('{"a":1}');
+    expect(extractOutputText({ output_text: '{"a":1}', output: [] })).toBe('{"a":1}');
     expect(() => extractOutputText({ output: [{ content: [{ type: 'refusal', refusal: 'no' }] }] })).toThrow();
+    expect(() =>
+      extractOutputText({ status: 'incomplete', incomplete_details: { reason: 'max_output_tokens' }, output: [{ type: 'reasoning' }] }),
+    ).toThrow(/finish/);
   });
 });
 

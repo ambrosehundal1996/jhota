@@ -1,4 +1,4 @@
-import { toLocalDate, type LocalDate } from '@steady/domain';
+import { toLocalDate, type LocalDate } from '@jota/domain';
 import { useEffect, useState } from 'react';
 import { AppState } from 'react-native';
 

@@ -17,9 +17,9 @@ export function BrandMark({ size = 26 }: { size?: number }) {
 
 export function Wordmark() {
   return (
-    <View style={styles.row} accessibilityLabel="Steady">
+    <View style={styles.row} accessibilityLabel="Jota">
       <BrandMark />
-      <AppText variant="h3">steady</AppText>
+      <AppText variant="h3">jota</AppText>
     </View>
   );
 }

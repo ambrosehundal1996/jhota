@@ -9,7 +9,7 @@ import {
   type ProteinRange,
   type WeightChangeResult,
   type WeightUnit,
-} from '@steady/domain';
+} from '@jota/domain';
 import { analytics } from '../../analytics';
 import { getState, setState } from '../../state/appStore';
 import { enqueueUpsert } from '../../state/outbox';

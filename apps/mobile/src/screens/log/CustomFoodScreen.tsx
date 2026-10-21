@@ -11,7 +11,7 @@ import { closeLog, useLogContext } from './useLogContext';
 const numberOrNull = (text: string) => (text.trim() === '' ? null : Number(text));
 
 export function CustomFoodScreen({ navigation, route }: LogScreenProps<'CustomFood'>) {
-  const { date, meal, isToday } = useLogContext(route.params);
+  const { date, isToday } = useLogContext(route.params);
   const existing = useAppStore(s => (route.params?.customFoodId ? s.customFoods[route.params.customFoodId] : undefined));
   const [name, setName] = useState(existing?.food_name ?? route.params?.name ?? '');
   const [serving, setServing] = useState(existing?.serving_description ?? '');
@@ -37,7 +37,8 @@ export function CustomFoodScreen({ navigation, route }: LogScreenProps<'CustomFo
       existing?.id,
     );
     if (andLog) {
-      const log = addFoodLog({ food: loggableFromCustom(food), meal, date, source: 'custom' });
+      const log = addFoodLog({ food: loggableFromCustom(food), date, source: 'custom' });
+      if (!log) return;
       showToast(`Added ${food.food_name} · ${Math.round(log.protein_g)}g`, { label: 'Undo', onPress: () => undoLogs([log.id]) });
       closeLog(navigation);
     } else {

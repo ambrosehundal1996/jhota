@@ -6,7 +6,6 @@ import {
   Card,
   ConfirmSheet,
   IconButton,
-  MealSelector,
   Screen,
   SheetHeader,
   showToast,
@@ -41,7 +40,7 @@ export function FoodDetailScreen({ navigation, route }: LogScreenProps<'FoodDeta
 
 function AddFood({ navigation, route }: Pick<LogScreenProps<'FoodDetail'>, 'navigation' | 'route'>) {
   const params = route.params as Extract<LogScreenProps<'FoodDetail'>['route']['params'], { mode: 'add' }>;
-  const { date, isToday, meal, setMeal } = useLogContext(params);
+  const { date, isToday } = useLogContext(params);
   const [food, setFood] = useState<LoggableFood>(params.food);
   const [servings, setServings] = useState(params.servings ?? 1);
   const isFavorite = useAppStore(s => !!findFavorite(s, food));
@@ -65,7 +64,8 @@ function AddFood({ navigation, route }: Pick<LogScreenProps<'FoodDetail'>, 'navi
   const calories = food.calories === null ? null : Math.round(food.calories * servings);
 
   const add = () => {
-    const log = addFoodLog({ food, servings, meal, date, source: params.source });
+    const log = addFoodLog({ food, servings, date, source: params.source });
+    if (!log) return;
     showToast(`Added ${food.food_name} · ${Math.round(log.protein_g)}g${isToday ? '' : ` to ${formatShortDay(date)}`}`, {
       label: 'Undo',
       onPress: () => undoLogs([log.id]),
@@ -133,11 +133,6 @@ function AddFood({ navigation, route }: Pick<LogScreenProps<'FoodDetail'>, 'navi
         <Stepper value={servings} onChange={setServings} step={0.5} min={0.5} max={20} format={formatServings} label="Servings" />
       </View>
 
-      <AppText variant="bodyStrong" style={styles.label}>
-        Meal
-      </AppText>
-      <MealSelector value={meal} onChange={setMeal} />
-
       {food.external_provider === 'off' ? (
         <AppText variant="caption" tone="tertiary" style={styles.attribution}>
           Product data from Open Food Facts. Check the label if something looks off.
@@ -150,7 +145,6 @@ function AddFood({ navigation, route }: Pick<LogScreenProps<'FoodDetail'>, 'navi
 function EditLog({ logId, navigation }: { logId: string; navigation: LogScreenProps<'FoodDetail'>['navigation'] }) {
   const log = useAppStore(s => s.logs[logId]) as FoodLog | undefined;
   const [proteinText, setProteinText] = useState(log ? trimNumber(log.protein_g) : '');
-  const [meal, setMeal] = useState(log?.meal_type ?? 'snack');
   const [scale, setScale] = useState(1);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
@@ -162,13 +156,12 @@ function EditLog({ logId, navigation }: { logId: string; navigation: LogScreenPr
   const scalable = log.source !== 'quick_add' && log.source !== 'ai_photo';
   const protein = scalable ? round1(log.protein_g * scale) : Number(proteinText);
   const valid = Number.isFinite(protein) && protein >= 0 && protein <= 500;
-  const dirty = meal !== log.meal_type || protein !== log.protein_g;
+  const dirty = protein !== log.protein_g;
 
   const save = () => {
     const factor = log.protein_g > 0 ? protein / log.protein_g : 1;
     const scaleOrNull = (v: number | null) => (v === null ? null : round1(v * factor));
     updateFoodLog(log.id, {
-      meal_type: meal,
       protein_g: protein,
       serving_quantity: scalable ? scaleOrNull(log.serving_quantity) : log.serving_quantity,
       calories: scaleOrNull(log.calories),
@@ -231,11 +224,6 @@ function EditLog({ logId, navigation }: { logId: string; navigation: LogScreenPr
         </View>
       )}
 
-      <AppText variant="bodyStrong" style={styles.label}>
-        Meal
-      </AppText>
-      <MealSelector value={meal} onChange={setMeal} />
-
       <Button label="Delete entry" variant="destructive" size="medium" onPress={() => setConfirmDelete(true)} style={styles.delete} />
 
       <ConfirmSheet
@@ -256,7 +244,6 @@ const styles = StyleSheet.create({
   hero: { marginTop: spacing.xl, alignItems: 'center', paddingVertical: spacing.xl, gap: spacing.xs },
   calories: { color: colors.textTertiary },
   row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: spacing.xl },
-  label: { marginTop: spacing.xl, marginBottom: spacing.sm },
   field: { marginTop: spacing.xl },
   attribution: { marginTop: spacing.xl },
   delete: { marginTop: spacing.xxl },

@@ -1,4 +1,4 @@
-import type { NormalizedFood } from '@steady/domain';
+import type { NormalizedFood } from '@jota/domain';
 
 /**
  * Server-side food data source. The app only ever sees NormalizedFood, so providers can be

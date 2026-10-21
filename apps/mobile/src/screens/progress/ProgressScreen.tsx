@@ -7,7 +7,7 @@ import {
   goalStatus,
   weeklySummary,
   type LocalDate,
-} from '@steady/domain';
+} from '@jota/domain';
 import React, { useCallback, useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { analytics } from '../../analytics';

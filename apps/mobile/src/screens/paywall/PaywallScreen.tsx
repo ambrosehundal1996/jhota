@@ -129,7 +129,7 @@ export function PaywallScreen() {
         <Wordmark />
       </View>
       <AppText variant="title" accessibilityRole="header" style={styles.title}>
-        {expired ? 'Welcome back' : intro ? `Try Steady free for ${intro.replace(/ free$/, '')}` : 'Make protein a daily habit'}
+        {expired ? 'Welcome back' : intro ? `Try Jota free for ${intro.replace(/ free$/, '')}` : 'Make protein a daily habit'}
       </AppText>
       <AppText variant="body" tone="secondary" style={styles.sub}>
         {expired

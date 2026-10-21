@@ -3,9 +3,9 @@ import { getState, initialAppData, useAppStore } from '../src/state/appStore';
 import { storage } from '../src/state/storage';
 
 async function relaunch() {
-  const persisted = storage.getString('steady-app');
+  const persisted = storage.getString('jota-app');
   useAppStore.setState(initialAppData(), true);
-  if (persisted) storage.set('steady-app', persisted);
+  if (persisted) storage.set('jota-app', persisted);
   await useAppStore.persist.rehydrate();
 }
 

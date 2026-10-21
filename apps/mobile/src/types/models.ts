@@ -1,4 +1,5 @@
 import type {
+  AiConfidence,
   DailyOverride,
   FoodLog,
   FoodProviderId,
@@ -6,8 +7,9 @@ import type {
   LocalDate,
   MealType,
   NormalizedFood,
+  UncertaintyReason,
   WeightUnit,
-} from '@steady/domain';
+} from '@jota/domain';
 
 export type { DailyOverride, FoodLog, LocalDate, MealType, NormalizedFood };
 
@@ -85,8 +87,11 @@ export interface SavedMealItem extends FoodSnapshot {
 export interface NotificationPreferences {
   user_id: string;
   enabled: boolean;
+  morning_9am: boolean;
   zero_log_2pm: boolean;
-  zero_log_7pm: boolean;
+  remaining_4pm: boolean;
+  remaining_7pm: boolean;
+  zero_log_8pm: boolean;
   progress_reminder: boolean;
   permission_status: string | null;
   updated_at: string;
@@ -147,22 +152,30 @@ export interface AiDraftItem {
   name: string;
   portion: string;
   protein_g: number;
+  /** Null for items the user added. */
   original_protein_g: number | null;
+  original_name?: string | null;
+  /** The AI's rating of its original estimate; never updated by user edits. */
+  confidence?: AiConfidence | null;
+  uncertainty_reasons?: UncertaintyReason[];
 }
 
 export interface AiDraft {
   id: string;
   date: LocalDate;
-  meal: MealType;
   photoUri: string | null;
   storagePath: string | null;
   context: string;
-  status: 'picked' | 'uploading' | 'analyzing' | 'ready' | 'failed';
+  status: 'picked' | 'uploading' | 'analyzing' | 'ready' | 'clarify' | 'failed';
   error: string | null;
   analysisId: string | null;
   rawItems: { name: string; protein_g: number }[] | null;
   rawTotal: number | null;
   items: AiDraftItem[];
-  notes: string | null;
+  overallConfidence?: AiConfidence | null;
+  reviewNotes?: string[];
+  clarificationQuestion?: string | null;
+  /** Context sent with the latest analysis, so a retry only happens with new information. */
+  analyzedContext?: string | null;
   createdAt: string;
 }

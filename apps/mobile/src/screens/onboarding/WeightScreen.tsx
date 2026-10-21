@@ -1,4 +1,4 @@
-import { convertWeight, isValidWeight, WEIGHT_LIMITS, type WeightUnit } from '@steady/domain';
+import { convertWeight, isValidWeight, WEIGHT_LIMITS, type WeightUnit } from '@jota/domain';
 import React, { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { AppText, Button, Screen, SegmentedControl, StepHeader, TextField } from '../../components';

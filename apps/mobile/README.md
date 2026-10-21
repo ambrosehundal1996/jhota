@@ -1,11 +1,12 @@
-# @steady/mobile
+# @jota/mobile
 
-The Steady iOS app. See the [root README](../../README.md) for setup.
+The Jota iOS app. See the [root README](../../README.md) for setup.
 
 ```sh
-pnpm start       # Metro
-pnpm ios         # build and run on the simulator
-pnpm test        # jest
-pnpm typecheck
-pnpm lint
+npm start             # Metro
+npm run ios           # build and run on the simulator
+npm run web           # browser version at http://localhost:8080
+npm test              # jest
+npm run typecheck
+npm run lint
 ```

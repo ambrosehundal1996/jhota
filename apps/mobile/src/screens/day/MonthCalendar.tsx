@@ -1,4 +1,4 @@
-import { compareLocalDates, toLocalDate, type LocalDate } from '@steady/domain';
+import { compareLocalDates, toLocalDate, type LocalDate } from '@jota/domain';
 import React, { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { AppText, IconButton } from '../../components';

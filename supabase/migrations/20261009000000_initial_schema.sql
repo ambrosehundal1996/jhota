@@ -1,4 +1,4 @@
--- Steady initial schema.
+-- Jota initial schema.
 -- Every private table is keyed by user_id = auth.uid() and protected by RLS.
 -- Client-generated UUID primary keys make offline outbox upserts idempotent.
 
@@ -230,8 +230,12 @@ create trigger saved_meal_items_updated_at before update on public.saved_meal_it
 create table public.notification_preferences (
   user_id uuid primary key default auth.uid() references auth.users (id) on delete cascade,
   enabled boolean not null default true,
+  morning_9am boolean not null default true,
   zero_log_2pm boolean not null default true,
   zero_log_7pm boolean not null default false,
+  remaining_4pm boolean not null default true,
+  remaining_7pm boolean not null default true,
+  zero_log_8pm boolean not null default true,
   progress_reminder boolean not null default false,
   permission_status text,
   created_at timestamptz not null default now(),

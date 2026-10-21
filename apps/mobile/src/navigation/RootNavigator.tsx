@@ -7,7 +7,6 @@ import { hasAccess } from '../services/subscriptions';
 import { useAppStore } from '../state/appStore';
 import { colors } from '../theme';
 import { DayHistoryScreen } from '../screens/day/DayHistoryScreen';
-import { GoalReachedScreen } from '../screens/today/GoalReachedScreen';
 import { TodayScreen } from '../screens/today/TodayScreen';
 import { ProgressScreen } from '../screens/progress/ProgressScreen';
 import { ProfileScreen } from '../screens/profile/ProfileScreen';
@@ -103,7 +102,6 @@ export function RootNavigator() {
           <Root.Screen name="Main" component={MainTabs} />
           <Root.Screen name="Log" component={LogNavigator} options={{ presentation: 'modal' }} />
           <Root.Screen name="Day" component={DayHistoryScreen} />
-          <Root.Screen name="GoalReached" component={GoalReachedScreen} options={{ presentation: 'fullScreenModal', animation: 'fade' }} />
           <Root.Screen name="ProteinGoal" component={ProteinGoalScreen} />
           <Root.Screen name="BodyWeight" component={BodyWeightScreen} />
           <Root.Screen name="GoalTypeSettings" component={GoalTypeScreen} />

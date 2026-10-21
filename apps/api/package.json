@@ -1,5 +1,5 @@
 {
-  "name": "@steady/api",
+  "name": "@jota/api",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -9,7 +9,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@steady/domain": "workspace:*",
+    "@jota/domain": "*",
     "@supabase/supabase-js": "^2.58.0",
     "zod": "^3.25.76"
   },

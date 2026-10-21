@@ -1,6 +1,7 @@
-import { validateProteinRange, type ProteinRange } from '@steady/domain';
+import { validateProteinRange, type ProteinRange } from '@jota/domain';
 import React, { useEffect, useState } from 'react';
 import { StyleSheet, TextInput, View } from 'react-native';
+import { haptic } from '../services/haptics';
 import { colors, radii, spacing, typography } from '../theme';
 import { AppText } from './AppText';
 import { IconButton } from './IconButton';
@@ -17,7 +18,16 @@ function GramField({ label, value, onChange }: { label: string; value: number; o
       <AppText variant="bodyStrong" style={styles.label}>
         {label}
       </AppText>
-      <IconButton icon="minus" size={36} accessibilityLabel={`Decrease ${label}`} onPress={() => onChange(Math.max(0, value - 5))} />
+      <IconButton
+        icon="minus"
+        size={36}
+        accessibilityLabel={`Decrease ${label}`}
+        onPress={() => {
+          if (value <= 0) return;
+          haptic('selection');
+          onChange(Math.max(0, value - 5));
+        }}
+      />
       <View style={styles.inputWrap}>
         <TextInput
           value={text}
@@ -35,7 +45,15 @@ function GramField({ label, value, onChange }: { label: string; value: number; o
           g
         </AppText>
       </View>
-      <IconButton icon="plus" size={36} accessibilityLabel={`Increase ${label}`} onPress={() => onChange(value + 5)} />
+      <IconButton
+        icon="plus"
+        size={36}
+        accessibilityLabel={`Increase ${label}`}
+        onPress={() => {
+          haptic('selection');
+          onChange(value + 5);
+        }}
+      />
     </View>
   );
 }

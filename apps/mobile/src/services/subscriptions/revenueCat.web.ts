@@ -9,7 +9,7 @@ export const revenueCatService: SubscriptionService = {
   getStatus: async () => null,
   getPackages: async () => [],
   purchase: async () => {
-    throw new Error('Subscriptions are managed in the Steady iOS app.');
+    throw new Error('Subscriptions are managed in the Jota iOS app.');
   },
   restore: async () => null,
   onStatusChange: () => () => undefined,

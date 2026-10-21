@@ -7,7 +7,7 @@
     "skipLibCheck": true,
     "customConditions": ["react-native"],
     "paths": {
-      "@steady/domain": ["./../../packages/domain/src/index.ts"]
+      "@jota/domain": ["./../../packages/domain/src/index.ts"]
     }
   },
   "include": ["**/*.ts", "**/*.tsx"],

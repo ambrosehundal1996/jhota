@@ -4,6 +4,7 @@ import { StatusBar } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { bootstrap } from './src/app/bootstrap';
 import { ToastHost } from './src/components';
+import { GoalCelebrationHost } from './src/screens/today/GoalCelebration';
 import { linking } from './src/navigation/linking';
 import { RootNavigator } from './src/navigation/RootNavigator';
 import { colors } from './src/theme';
@@ -29,6 +30,7 @@ export default function App() {
         <RootNavigator />
       </NavigationContainer>
       <ToastHost />
+      <GoalCelebrationHost />
     </SafeAreaProvider>
   );
 }

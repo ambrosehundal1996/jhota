@@ -5,7 +5,7 @@ import { analytics } from '../analytics';
 import { getInitialNotificationLink, linkFromNotificationEvent } from '../services/notifications/reminders';
 import type { RootStackParamList } from './types';
 
-export const URL_PREFIXES = ['steady://'];
+export const URL_PREFIXES = ['jota://'];
 
 const ACTIONS: Record<string, string> = {
   'log/quick-add': 'quick_add',
@@ -17,7 +17,7 @@ const ACTIONS: Record<string, string> = {
 
 /** Widget links carry ?src=widget so taps are attributable without extra native code. */
 export function trackIncomingUrl(url: string): void {
-  const match = url.match(/^steady:\/\/([^?]*)(?:\?(.*))?$/);
+  const match = url.match(/^jota:\/\/([^?]*)(?:\?(.*))?$/);
   if (!match) return;
   const path = (match[1] ?? '').replace(/\/$/, '');
   const src = new URLSearchParams(match[2] ?? '').get('src');

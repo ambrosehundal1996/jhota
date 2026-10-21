@@ -1,4 +1,4 @@
-import type { AnalyzePhotoResponse } from '@steady/domain';
+import type { AnalyzePhotoResponse } from '@jota/domain';
 import { apiFetch, ApiError } from '../api/client';
 import { getSupabase } from '../supabase/client';
 import { uuid } from '../../utils/id';

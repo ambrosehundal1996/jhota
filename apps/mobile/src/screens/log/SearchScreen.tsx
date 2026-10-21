@@ -1,4 +1,4 @@
-import type { NormalizedFood } from '@steady/domain';
+import type { NormalizedFood } from '@jota/domain';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, StyleSheet, TextInput, View } from 'react-native';
 import { analytics } from '../../analytics';
@@ -18,7 +18,7 @@ export const servingDetail = (food: NormalizedFood) =>
 export const caloriesMeta = (kcal: number | null) => (kcal === null ? null : `${Math.round(kcal)} kcal`);
 
 export function SearchScreen({ navigation, route }: LogScreenProps<'Search'>) {
-  const { date, meal, src } = useLogContext(route.params);
+  const { date, src } = useLogContext(route.params);
   const [query, setQuery] = useState(route.params?.query ?? '');
   const [results, setResults] = useState<NormalizedFood[]>([]);
   const [status, setStatus] = useState<Status>('idle');
@@ -26,7 +26,7 @@ export function SearchScreen({ navigation, route }: LogScreenProps<'Search'>) {
   const [attempt, setAttempt] = useState(0);
   const customFoods = useCustomFoods();
   const inputRef = useRef<React.ComponentRef<typeof TextInput>>(null);
-  const ctx = { date, meal, src };
+  const ctx = { date, src };
 
   const trimmed = query.trim();
   const customMatches = useMemo(() => searchCustomFoods(customFoods, trimmed), [customFoods, trimmed]);

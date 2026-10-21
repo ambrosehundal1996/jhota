@@ -1,7 +1,9 @@
 import type { LinkingOptions } from '@react-navigation/native';
 import type { RootStackParamList } from './types';
 
-/** Browser URLs map to the same paths as the app's steady:// deep links, e.g. /progress or /log/quick-add. */
+declare const window: { location: { origin: string } } | undefined;
+
+/** Browser URLs map to the same paths as the app's jota:// deep links, e.g. /progress or /log/quick-add. */
 export const linking: LinkingOptions<RootStackParamList> = {
   prefixes: [typeof window !== 'undefined' ? window.location.origin : 'http://localhost'],
   config: {

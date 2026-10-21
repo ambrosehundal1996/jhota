@@ -14,16 +14,16 @@ beforeEach(() => {
 });
 
 test('logs sum into the day total', () => {
-  quickAdd({ grams: 40, meal: 'breakfast', date: DATE });
-  quickAdd({ grams: 89, meal: 'lunch', date: DATE });
+  quickAdd({ grams: 40, date: DATE });
+  quickAdd({ grams: 89, date: DATE });
   expect(day().total).toMatchObject({ total: 129, source: 'logs' });
   expect(day().status.reached).toBe(false);
-  quickAdd({ grams: 1, meal: 'snack', date: DATE });
+  quickAdd({ grams: 1, date: DATE });
   expect(day().status.reached).toBe(true);
 });
 
 test("Set Today's Total replaces the logged total and keeps the entries", () => {
-  quickAdd({ grams: 60, meal: 'lunch', date: DATE });
+  quickAdd({ grams: 60, date: DATE });
   setDailyOverride(DATE, 145);
   expect(day().total).toMatchObject({ total: 145, loggedTotal: 60, source: 'override', entryCount: 1 });
   expect(day().logs).toHaveLength(1);
@@ -39,7 +39,7 @@ test('setting the total twice updates the same override row', () => {
 });
 
 test('removing the override returns to the calculated total', () => {
-  quickAdd({ grams: 60, meal: 'lunch', date: DATE });
+  quickAdd({ grams: 60, date: DATE });
   setDailyOverride(DATE, 145);
   removeDailyOverride(DATE);
   expect(day().total).toMatchObject({ total: 60, source: 'logs' });
@@ -49,7 +49,8 @@ test('removing the override returns to the calculated total', () => {
 });
 
 test('delete and undo restore a log; undoing an add removes it', () => {
-  const log = quickAdd({ grams: 50, meal: 'dinner', date: DATE });
+  const log = quickAdd({ grams: 50, date: DATE });
+  if (!log) throw new Error('expected log');
   const undo = deleteFoodLog(log.id);
   expect(day().total.total).toBe(0);
   undo();

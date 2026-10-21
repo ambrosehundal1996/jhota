@@ -1,7 +1,7 @@
 import { requireUser } from '../../lib/auth.js';
 import { lookupBarcode } from '../../lib/foods/index.js';
 import { normalizeBarcode } from '../../lib/foods/types.js';
-import { errorResponse, handle, json } from '../../lib/http.js';
+import { errorResponse, handle, json, preflight } from '../../lib/http.js';
 import { rateLimit } from '../../lib/rateLimit.js';
 
 export const GET = handle(async request => {
@@ -13,3 +13,5 @@ export const GET = handle(async request => {
   if (!food) return errorResponse(404, 'not_found', 'We don’t have this product yet.');
   return json({ food });
 });
+
+export const OPTIONS = preflight;

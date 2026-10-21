@@ -1,5 +1,5 @@
 import notifee, { AuthorizationStatus, EventType, TriggerType, type Event } from '@notifee/react-native';
-import { planReminders, toLocalDate, type ReminderPreferences } from '@steady/domain';
+import { planReminders, toLocalDate, type ReminderPreferences } from '@jota/domain';
 import { analytics } from '../../analytics';
 import { getState, setState } from '../../state/appStore';
 import { selectDay } from '../../state/selectors';
@@ -7,14 +7,27 @@ import type { NotificationPreferences } from '../../types/models';
 
 export const remindersSupported = true;
 
-const REMINDER_PREFIXES = ['zero_log_2pm-', 'zero_log_7pm-', 'progress-'];
+const REMINDER_PREFIXES = [
+  'morning_9am-',
+  'zero_log_2pm-',
+  'zero_log_7pm-',
+  'zero_log_8pm-',
+  'remaining_4pm-',
+  'remaining_7pm-',
+  'progress-',
+];
 const isOurs = (id: string) => REMINDER_PREFIXES.some(p => id.startsWith(p));
+const isZeroLog = (id: string) => id.startsWith('zero_log') || id.startsWith('morning_');
+const needsFreshCopy = (id: string) => id.startsWith('progress-') || id.startsWith('remaining_') || id.startsWith('morning_');
 
 export function toReminderPrefs(prefs: NotificationPreferences): ReminderPreferences {
   return {
     enabled: prefs.enabled,
+    morning9am: prefs.morning_9am !== false,
     zeroLog2pm: prefs.zero_log_2pm,
-    zeroLog7pm: prefs.zero_log_7pm,
+    remaining4pm: prefs.remaining_4pm !== false,
+    remaining7pm: prefs.remaining_7pm !== false,
+    zeroLog8pm: prefs.zero_log_8pm !== false,
     progressReminder: prefs.progress_reminder,
   };
 }
@@ -62,7 +75,7 @@ async function runSync(): Promise<void> {
 
     const existing = (await notifee.getTriggerNotificationIds()).filter(isOurs);
     const wanted = new Set(plan.map(p => p.id));
-    const stale = existing.filter(id => !wanted.has(id) || id.startsWith('progress-'));
+    const stale = existing.filter(id => !wanted.has(id) || needsFreshCopy(id));
     if (stale.length) await notifee.cancelTriggerNotifications(stale);
 
     const kept = new Set(existing.filter(id => !stale.includes(id)));
@@ -91,7 +104,7 @@ export async function reportDeliveredReminders(): Promise<void> {
     const reported = new Set(getState().flags.reportedReminderIds);
     const fresh = displayed.map(d => d.id ?? d.notification.id ?? '').filter(id => id && isOurs(id) && !reported.has(id));
     for (const id of fresh) {
-      if (id.startsWith('zero_log')) analytics.track('zero_log_reminder_sent', { kind: id.split('-')[0] });
+      if (isZeroLog(id)) analytics.track('zero_log_reminder_sent', { kind: id.split('-')[0] });
     }
     if (fresh.length) {
       setState(s => ({ flags: { ...s.flags, reportedReminderIds: [...s.flags.reportedReminderIds, ...fresh].slice(-60) } }));
@@ -107,7 +120,7 @@ export function linkFromNotificationEvent(event: Event): string | null {
   const link = notification?.data?.link;
   if (typeof link !== 'string') return null;
   const kind = String(notification?.data?.kind ?? '');
-  analytics.track(kind === 'progress' ? 'progress_reminder_opened' : 'zero_log_reminder_opened', { kind });
+  analytics.track(isZeroLog(kind) ? 'zero_log_reminder_opened' : 'progress_reminder_opened', { kind });
   return link;
 }
 
@@ -116,6 +129,6 @@ export async function getInitialNotificationLink(): Promise<string | null> {
   const link = initial?.notification.data?.link;
   if (typeof link !== 'string') return null;
   const kind = String(initial?.notification.data?.kind ?? '');
-  analytics.track(kind === 'progress' ? 'progress_reminder_opened' : 'zero_log_reminder_opened', { kind });
+  analytics.track(isZeroLog(kind) ? 'zero_log_reminder_opened' : 'progress_reminder_opened', { kind });
   return link;
 }

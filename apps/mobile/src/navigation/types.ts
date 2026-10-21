@@ -1,4 +1,4 @@
-import type { LocalDate, LogSource, MealType } from '@steady/domain';
+import type { LocalDate, LogSource } from '@jota/domain';
 import type { NavigatorScreenParams } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { LoggableFood } from '../types/models';
@@ -8,7 +8,6 @@ export type LaunchSource = 'widget' | 'notification' | 'today' | 'history' | und
 
 interface LogContext {
   date?: LocalDate;
-  meal?: MealType;
   src?: LaunchSource;
 }
 
@@ -46,7 +45,6 @@ export type RootStackParamList = {
   Main: NavigatorScreenParams<TabParamList> | undefined;
   Log: NavigatorScreenParams<LogStackParamList> | undefined;
   Day: { date: LocalDate };
-  GoalReached: undefined;
   ProteinGoal: undefined;
   BodyWeight: undefined;
   GoalTypeSettings: undefined;

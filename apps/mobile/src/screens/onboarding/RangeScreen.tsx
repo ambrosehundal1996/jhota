@@ -1,4 +1,4 @@
-import { calculateProteinRange, validateProteinRange, type ProteinRange } from '@steady/domain';
+import { calculateProteinRange, validateProteinRange, type ProteinRange } from '@jota/domain';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { analytics } from '../../analytics';

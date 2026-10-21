@@ -1,4 +1,4 @@
-import type { NormalizedFood } from '@steady/domain';
+import type { NormalizedFood } from '@jota/domain';
 import { HttpError, requireEnv } from '../env.js';
 import { isPlausible, normalizeBarcode, round1, titleCase, type FoodProvider } from './types.js';
 

@@ -34,7 +34,8 @@ export type IconName =
   | 'sparkle'
   | 'backspace'
   | 'apple'
-  | 'cloudOff';
+  | 'cloudOff'
+  | 'info';
 
 interface Props {
   name: IconName;
@@ -150,6 +151,13 @@ export function Icon({ name, size = 22, color = colors.text, strokeWidth = 1.8 }
             d="M16.4 12.6c0-2.3 1.9-3.4 2-3.5-1.1-1.6-2.8-1.8-3.4-1.8-1.4-.1-2.8.9-3.5.9s-1.8-.8-3-.8C7 7.4 5.6 8.3 4.8 9.7c-1.6 2.8-.4 6.9 1.2 9.1.8 1.1 1.7 2.3 2.8 2.3 1.1 0 1.6-.7 2.9-.7s1.7.7 2.9.7 2-1.1 2.7-2.2c.9-1.3 1.2-2.5 1.2-2.6 0 0-2.4-.9-2.4-3.7zM14.2 5.8c.6-.8 1-1.8.9-2.8-.9 0-2 .6-2.6 1.4-.6.6-1.1 1.7-.9 2.7 1 .1 2-.5 2.6-1.3z"
             fill={color}
           />
+        );
+      case 'info':
+        return (
+          <>
+            <Circle cx="12" cy="12" r="8.5" {...p} />
+            <Path d="M12 11v5.5M12 7.8v.2" {...p} />
+          </>
         );
       case 'cloudOff':
         return <Path d="M4 4l16 16M8.5 8.6A5 5 0 007 18h9.5M12.3 7.1A5 5 0 0117 11a3.5 3.5 0 012.7 5.7" {...p} />;

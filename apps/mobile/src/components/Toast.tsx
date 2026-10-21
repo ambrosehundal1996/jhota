@@ -12,12 +12,19 @@ interface ToastState {
   message: string | null;
   actionLabel?: string;
   onAction?: () => void;
+  error?: boolean;
 }
 
 const useToastStore = create<ToastState>(() => ({ id: 0, message: null }));
 
-export function showToast(message: string, action?: { label: string; onPress: () => void }) {
-  useToastStore.setState(s => ({ id: s.id + 1, message, actionLabel: action?.label, onAction: action?.onPress }));
+export function showToast(message: string, action?: { label: string; onPress: () => void; error?: boolean }) {
+  useToastStore.setState(s => ({
+    id: s.id + 1,
+    message,
+    actionLabel: action?.label,
+    onAction: action?.onPress,
+    error: action?.error ?? false,
+  }));
   AccessibilityInfo.announceForAccessibility(message);
 }
 
@@ -25,7 +32,7 @@ export const hideToast = () => useToastStore.setState({ message: null });
 
 /** One global toast, used for "Added 17g · Undo" confirmations. */
 export function ToastHost() {
-  const { id, message, actionLabel, onAction } = useToastStore();
+  const { id, message, actionLabel, onAction, error } = useToastStore();
   const insets = useSafeAreaInsets();
   useEffect(() => {
     if (!message) return;
@@ -36,7 +43,7 @@ export function ToastHost() {
   return (
     <View pointerEvents="box-none" style={[StyleSheet.absoluteFill, styles.host, { paddingBottom: insets.bottom + 72 }]}>
       <Animated.View key={id} entering={FadeInDown.duration(180)} exiting={FadeOutDown.duration(160)} style={styles.toast}>
-        <Icon name="check" size={18} color={colors.accentTintStrong} strokeWidth={2.4} />
+        {error ? null : <Icon name="check" size={18} color={colors.accentTintStrong} strokeWidth={2.4} />}
         <AppText variant="bodyStrong" tone="onAccent" style={styles.message} numberOfLines={2}>
           {message}
         </AppText>

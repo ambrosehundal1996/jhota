@@ -1,4 +1,4 @@
-import { previewRecalculatedRange, validateProteinRange, type ProteinRange } from '@steady/domain';
+import { previewRecalculatedRange, validateProteinRange, type ProteinRange } from '@jota/domain';
 import React, { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { AppText, BackLink, Button, Card, Chip, ConfirmSheet, Screen, showToast } from '../../components';

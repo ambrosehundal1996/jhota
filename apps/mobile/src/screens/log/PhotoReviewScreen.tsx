@@ -1,16 +1,19 @@
+import type { AiConfidence, UncertaintyReason } from '@jota/domain';
 import React, { useEffect, useRef, useState } from 'react';
 import { Image, Pressable, StyleSheet, TextInput, View } from 'react-native';
-import { AppText, Button, Card, ConfirmSheet, Icon, IconButton, MealSelector, Screen, SheetHeader, showToast } from '../../components';
+import { AppText, Button, Card, ConfirmSheet, Icon, IconButton, Screen, SheetHeader, showToast } from '../../components';
 import {
   addDraftItem,
   confirmDraft,
   discardDraft,
   draftTotal,
+  isDraftEdited,
+  itemConfidenceTag,
   removeDraftItem,
   rescaleDraftTotal,
-  setDraftMeal,
   updateDraftItem,
 } from '../../features/ai/draft';
+import { analytics } from '../../analytics';
 import { undoLogs } from '../../features/logging/actions';
 import { useLocalToday } from '../../hooks/useLocalToday';
 import type { LogScreenProps } from '../../navigation/types';
@@ -19,6 +22,26 @@ import type { AiDraftItem } from '../../types/models';
 import { colors, radii, spacing, typography } from '../../theme';
 import { formatShortDay, trimNumber } from '../../utils/format';
 import { closeLog } from './useLogContext';
+
+const LEVEL_LABEL: Record<AiConfidence, string> = { high: 'High', medium: 'Medium', low: 'Low' };
+
+const REASON_LABEL: Record<UncertaintyReason, string> = {
+  unclear_food_identity: 'hard to tell exactly what this is',
+  uncertain_portion: 'portion is estimated from the photo',
+  hidden_ingredients: 'some ingredients may be hidden',
+  uncertain_preparation: 'preparation is unclear',
+  variable_nutrition: 'protein varies by recipe or brand',
+  poor_image_quality: 'photo is hard to read',
+  conflicting_context: 'your note and the photo don’t match',
+};
+
+function tagLabel(item: AiDraftItem): string | null {
+  const tag = itemConfidenceTag(item);
+  if (tag === 'user_adjusted') return 'User adjusted';
+  if (tag === 'user_added') return 'Added by you';
+  if (tag === 'medium' || tag === 'low') return `${LEVEL_LABEL[tag]} confidence`;
+  return null;
+}
 
 const parse = (text: string) => {
   const n = Number(text.replace(',', '.'));
@@ -40,9 +63,9 @@ function ItemRow({ item, canRemove }: { item: AiDraftItem; canRemove: boolean })
           accessibilityLabel="Item name"
           maxLength={80}
         />
-        {item.portion ? (
+        {item.portion || tagLabel(item) ? (
           <AppText variant="caption" tone="tertiary">
-            {item.portion}
+            {[item.portion, tagLabel(item)].filter(Boolean).join(' · ')}
           </AppText>
         ) : null}
       </View>
@@ -73,6 +96,7 @@ export function PhotoReviewScreen({ navigation }: LogScreenProps<'PhotoReview'>)
   const [totalText, setTotalText] = useState('');
   const [editingTotal, setEditingTotal] = useState(false);
   const [confirmDiscard, setConfirmDiscard] = useState(false);
+  const [detailsOpen, setDetailsOpen] = useState(false);
   const leaving = useRef(false);
 
   const items = draft?.items ?? [];
@@ -88,6 +112,15 @@ export function PhotoReviewScreen({ navigation }: LogScreenProps<'PhotoReview'>)
   if (!draft || draft.status !== 'ready') return null;
 
   const isToday = draft.date === today;
+  const confidence = draft.overallConfidence ?? null;
+  const edited = isDraftEdited(draft);
+  const reviewNotes = confidence === 'medium' || confidence === 'low' ? (draft.reviewNotes ?? []) : [];
+  const ratedItems = items.filter(i => i.original_protein_g !== null && i.confidence);
+
+  const toggleDetails = () => {
+    if (!detailsOpen) analytics.track('ai_confidence_details_opened', { overall_confidence: confidence, edited });
+    setDetailsOpen(open => !open);
+  };
 
   const confirm = () => {
     leaving.current = true;
@@ -151,11 +184,52 @@ export function PhotoReviewScreen({ navigation }: LogScreenProps<'PhotoReview'>)
             </AppText>
             <Icon name="edit" size={16} color={colors.textTertiary} />
           </View>
+          {confidence ? (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityState={{ expanded: detailsOpen }}
+              accessibilityLabel={`${edited ? 'AI confidence' : 'Confidence'}: ${LEVEL_LABEL[confidence]}. Show details`}
+              onPress={toggleDetails}
+              hitSlop={8}
+              style={styles.confidence}
+              testID="confidence-toggle"
+            >
+              <AppText variant="caption" tone="secondary">
+                {edited ? `AI confidence: ${LEVEL_LABEL[confidence]} · adjusted by you` : `Confidence: ${LEVEL_LABEL[confidence]}`}
+              </AppText>
+              <Icon name="info" size={14} color={colors.textTertiary} />
+            </Pressable>
+          ) : null}
         </View>
       </View>
 
+      {detailsOpen && confidence ? (
+        <Card style={styles.details} testID="confidence-details">
+          <AppText variant="caption" tone="secondary">
+            This is the AI’s own rating of its original estimate, based on how clear the food, portion and ingredients
+            are. It isn’t a measured accuracy.
+          </AppText>
+          {ratedItems.map(item => {
+            const reasons = (item.uncertainty_reasons ?? []).map(r => REASON_LABEL[r]);
+            const adjusted = itemConfidenceTag(item) === 'user_adjusted';
+            return (
+              <View key={item.key} style={styles.detailRow}>
+                <AppText variant="captionStrong">{item.original_name ?? item.name}</AppText>
+                <AppText variant="caption" tone="tertiary">
+                  {[`${LEVEL_LABEL[item.confidence!]} confidence`, ...reasons, adjusted ? 'since adjusted by you' : null]
+                    .filter(Boolean)
+                    .join(' · ')}
+                </AppText>
+              </View>
+            );
+          })}
+        </Card>
+      ) : null}
+
       <AppText variant="caption" tone="secondary" style={styles.disclaimer}>
-        AI estimates can be off. Adjust anything that doesn’t look right before adding.
+        {confidence === 'low' && !edited
+          ? 'We’re less certain about this estimate. Please review before saving.'
+          : 'AI estimates can be off. Adjust anything that doesn’t look right before adding.'}
       </AppText>
 
       <Card style={styles.items}>
@@ -170,16 +244,15 @@ export function PhotoReviewScreen({ navigation }: LogScreenProps<'PhotoReview'>)
         </Pressable>
       </Card>
 
-      {draft.notes ? (
-        <AppText variant="caption" tone="tertiary" style={styles.notes}>
-          {draft.notes}
-        </AppText>
+      {reviewNotes.length ? (
+        <View style={styles.notes}>
+          {reviewNotes.map(note => (
+            <AppText key={note} variant="caption" tone="tertiary">
+              {note}
+            </AppText>
+          ))}
+        </View>
       ) : null}
-
-      <AppText variant="bodyStrong" style={styles.label}>
-        Meal
-      </AppText>
-      <MealSelector value={draft.meal} onChange={setDraftMeal} />
 
       <ConfirmSheet
         visible={confirmDiscard}
@@ -225,6 +298,8 @@ const styles = StyleSheet.create({
   },
   grams: { ...typography.numberSmall, color: colors.text, paddingVertical: spacing.xs, minWidth: 32, textAlign: 'right' },
   addItem: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, paddingVertical: spacing.md },
-  notes: { marginTop: spacing.md },
-  label: { marginTop: spacing.xl, marginBottom: spacing.sm },
+  notes: { marginTop: spacing.md, gap: spacing.xs },
+  confidence: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginTop: 2, alignSelf: 'flex-start' },
+  details: { marginTop: spacing.md, gap: spacing.sm },
+  detailRow: { gap: 2 },
 });

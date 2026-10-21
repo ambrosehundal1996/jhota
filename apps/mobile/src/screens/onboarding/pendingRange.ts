@@ -1,4 +1,4 @@
-import type { ProteinRange } from '@steady/domain';
+import type { ProteinRange } from '@jota/domain';
 import { create } from 'zustand';
 
 interface PendingRange {
