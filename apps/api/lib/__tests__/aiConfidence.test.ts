@@ -271,7 +271,7 @@ describe('analyzeMealPhoto request', () => {
       input: { content: { type: string; text?: string }[] }[];
       text: { format: { strict: boolean; schema: { required: string[] } } };
     };
-    expect(body.max_output_tokens).toBeGreaterThanOrEqual(2048);
+    expect(body.max_output_tokens).toBeGreaterThanOrEqual(8000);
     expect(body.reasoning.effort).toBe('low');
     expect(body.input[0]?.content[0]?.text).toBe(PROTEIN_PHOTO_SYSTEM_PROMPT);
     expect(PROTEIN_PHOTO_SYSTEM_PROMPT).toContain('Return the most plausible central estimate.');

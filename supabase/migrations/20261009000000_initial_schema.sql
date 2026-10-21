@@ -30,9 +30,9 @@ end;
 $$;
 
 -- ---------------------------------------------------------------------------
--- profiles (id = auth user id; survives anonymous -> Apple identity linking)
+-- protein_tracker_profiles (id = auth user id; survives anonymous -> Apple identity linking)
 -- ---------------------------------------------------------------------------
-create table public.profiles (
+create table public.protein_tracker_profiles (
   id uuid primary key references auth.users (id) on delete cascade,
   goal_type public.goal_type,
   weight_value numeric(6, 1) check (weight_value is null or weight_value > 0),
@@ -50,7 +50,7 @@ create table public.profiles (
   )
 );
 
-create trigger profiles_updated_at before update on public.profiles
+create trigger protein_tracker_profiles_updated_at before update on public.protein_tracker_profiles
   for each row execute function public.set_updated_at();
 
 -- ---------------------------------------------------------------------------
@@ -268,7 +268,7 @@ create trigger subscription_status_updated_at before update on public.subscripti
 -- ---------------------------------------------------------------------------
 -- Row Level Security
 -- ---------------------------------------------------------------------------
-alter table public.profiles enable row level security;
+alter table public.protein_tracker_profiles enable row level security;
 alter table public.custom_foods enable row level security;
 alter table public.ai_photo_analyses enable row level security;
 alter table public.food_logs enable row level security;
@@ -279,7 +279,7 @@ alter table public.saved_meal_items enable row level security;
 alter table public.notification_preferences enable row level security;
 alter table public.subscription_status enable row level security;
 
-create policy "own profile" on public.profiles
+create policy "own protein tracker profile" on public.protein_tracker_profiles
   for all to authenticated using (id = auth.uid()) with check (id = auth.uid());
 
 create policy "own custom foods" on public.custom_foods

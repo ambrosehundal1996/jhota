@@ -35,8 +35,8 @@ export function adoptUserId(nextUserId: string, opts: { isAnonymous: boolean; ap
         if (item.op !== 'upsert') return item;
         const row = { ...item.row };
         if ('user_id' in row) row.user_id = nextUserId;
-        if (item.table === 'profiles') row.id = nextUserId;
-        return { ...item, row, rowId: item.table === 'profiles' ? nextUserId : item.rowId };
+        if (item.table === 'protein_tracker_profiles') row.id = nextUserId;
+        return { ...item, row, rowId: item.table === 'protein_tracker_profiles' ? nextUserId : item.rowId };
       }),
       lastPulledAt: {},
     };

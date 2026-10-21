@@ -19,7 +19,7 @@ const COLLECTIONS: { table: SyncedTable; key: CollectionKey }[] = [
 
 /** Parents before children so foreign keys resolve. */
 const PUSH_ORDER: SyncedTable[] = [
-  'profiles',
+  'protein_tracker_profiles',
   'notification_preferences',
   'custom_foods',
   'saved_meals',
@@ -31,7 +31,7 @@ const PUSH_ORDER: SyncedTable[] = [
 ];
 
 const CONFLICT_TARGET: Partial<Record<SyncedTable, string>> = {
-  profiles: 'id',
+  protein_tracker_profiles: 'id',
   notification_preferences: 'user_id',
   daily_overrides: 'user_id,log_date',
 };
@@ -98,8 +98,8 @@ async function pullChanges(userId: string): Promise<void> {
   const supabase = getSupabase();
   if (!supabase) return;
 
-  const { data: profile } = await supabase.from('profiles').select('*').eq('id', userId).maybeSingle();
-  if (profile && !pendingRowIds('profiles').has(userId)) {
+  const { data: profile } = await supabase.from('protein_tracker_profiles').select('*').eq('id', userId).maybeSingle();
+  if (profile && !pendingRowIds('protein_tracker_profiles').has(userId)) {
     const local = getState().profile;
     if (!local || local.updated_at <= profile.updated_at) setState({ profile: profile as AppData['profile'] });
   }

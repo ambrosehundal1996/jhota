@@ -19,7 +19,7 @@
     "src"
   ],
   "scripts": {
-    "build": "tsc -p tsconfig.build.json",
+    "build": "node ./scripts/build.mjs",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },
@@ -27,7 +27,7 @@
     "zod": "^3.25.76"
   },
   "devDependencies": {
-    "tsup": "^8.5.0",
+    "esbuild": "^0.25.12",
     "typescript": "^5.9.3",
     "vitest": "^3.2.4"
   }

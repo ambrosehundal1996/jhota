@@ -31,7 +31,7 @@ export function toGoalSettings(profile: Profile): GoalSettings {
 function writeProfile(next: Profile): void {
   const profile = { ...next, updated_at: nowIso() };
   setState({ profile });
-  enqueueUpsert('profiles', profile.id, { ...profile });
+  enqueueUpsert('protein_tracker_profiles', profile.id, { ...profile });
 }
 
 function applySettings(settings: GoalSettings): void {

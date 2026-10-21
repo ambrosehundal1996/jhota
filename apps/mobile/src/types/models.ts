@@ -98,7 +98,7 @@ export interface NotificationPreferences {
 }
 
 export type SyncedTable =
-  | 'profiles'
+  | 'protein_tracker_profiles'
   | 'food_logs'
   | 'daily_overrides'
   | 'favorites'

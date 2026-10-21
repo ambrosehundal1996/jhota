@@ -59,5 +59,5 @@ test('switching units converts weight but keeps the range', () => {
 test('profile writes are queued for sync', () => {
   onboard(180, { min: 125, max: 180 }, false);
   const tables = getState().outbox.map(item => item.table);
-  expect(tables).toEqual(expect.arrayContaining(['profiles', 'notification_preferences']));
+  expect(tables).toEqual(expect.arrayContaining(['protein_tracker_profiles', 'notification_preferences']));
 });

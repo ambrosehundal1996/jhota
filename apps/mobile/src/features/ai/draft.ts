@@ -3,6 +3,7 @@ import { analytics } from '../../analytics';
 import { ApiError } from '../../services/api/client';
 import { analyzeMealPhoto, uploadMealPhoto } from '../../services/ai/photoAnalysis';
 import { ensureSession } from '../../services/supabase/auth';
+import { appConfig, isSupabaseConfigured } from '../../config';
 import { getState, LOCAL_USER_ID, setState } from '../../state/appStore';
 import { enqueueUpdate } from '../../state/outbox';
 import type { AiDraft, AiDraftItem, FoodLog } from '../../types/models';
@@ -84,8 +85,12 @@ export async function runAnalysis(): Promise<void> {
     let storagePath = draft.storagePath;
     if (!storagePath) {
       patchDraft({ status: 'uploading', error: null });
-      let userId = getState().userId;
-      if (userId === LOCAL_USER_ID) userId = (await ensureSession()) ?? LOCAL_USER_ID;
+      if (!isSupabaseConfigured() || !appConfig.apiBaseUrl) {
+        throw new ApiError(0, 'not_configured', 'Photo logging is not configured in this build.');
+      }
+      // Always refresh the session. A persisted local user id that does not match
+      // auth.uid() is rejected by the meal-photos storage policy.
+      const userId = (await ensureSession()) ?? getState().userId;
       if (userId === LOCAL_USER_ID) throw new ApiError(0, 'offline', 'Photo estimates need a connection.');
       storagePath = await uploadMealPhoto(draft.photoUri, userId);
       patchDraft({ storagePath });

@@ -423,9 +423,9 @@ export async function analyzeMealPhoto(args: {
     },
     body: JSON.stringify({
       model,
-      // gpt-5-mini reasons first; without a high enough cap it returns only a reasoning item
-      // and an empty estimate. Low effort keeps that budget for the JSON.
-      max_output_tokens: 4096,
+      // Reasoning tokens count toward this cap. 4096 was not enough for gpt-5-mini + this schema:
+      // OpenAI returned status=incomplete and the app showed "The estimate didn’t finish."
+      max_output_tokens: 16000,
       reasoning: { effort: 'low' },
       input: [
         { role: 'system', content: [{ type: 'input_text', text: PROTEIN_PHOTO_SYSTEM_PROMPT }] },
