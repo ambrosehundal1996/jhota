@@ -51,6 +51,16 @@ function applySettings(settings: GoalSettings): void {
 // Onboarding
 // ---------------------------------------------------------------------------
 
+export const DISPLAY_NAME_MAX = 30;
+
+export function normalizeDisplayName(raw: string): string {
+  return raw.replace(/\s+/g, ' ').trim().slice(0, DISPLAY_NAME_MAX);
+}
+
+export function setOnboardingName(displayName: string): void {
+  setState(s => ({ onboarding: { ...s.onboarding, displayName: normalizeDisplayName(displayName) || null } }));
+}
+
 export function setOnboardingGoal(goalType: GoalType): void {
   setState(s => ({ onboarding: { ...s.onboarding, goalType } }));
   analytics.track('goal_selected', { goal_type: goalType });
@@ -61,7 +71,7 @@ export function setOnboardingWeight(weightValue: number, weightUnit: WeightUnit)
   analytics.track('weight_entered', { unit: weightUnit });
 }
 
-export function completeOnboarding(range: ProteinRange, isCustom: boolean): Profile {
+export function completeOnboarding(range: ProteinRange, isCustom: boolean, opts?: { openLog?: boolean }): Profile {
   const { userId, onboarding, notificationPrefs, profile: existing } = getState();
   const now = nowIso();
   const profile: Profile = {
@@ -73,7 +83,7 @@ export function completeOnboarding(range: ProteinRange, isCustom: boolean): Prof
     protein_goal_max: range.max,
     protein_goal_is_custom: isCustom,
     timezone: deviceTimezone(),
-    display_name: existing?.display_name ?? null,
+    display_name: onboarding.displayName?.trim() || existing?.display_name || null,
     onboarding_complete: true,
     created_at: existing?.created_at ?? now,
     updated_at: now,
@@ -83,7 +93,10 @@ export function completeOnboarding(range: ProteinRange, isCustom: boolean): Prof
   setState({ notificationPrefs: prefs });
   enqueueUpsert('notification_preferences', userId, { ...prefs });
   analytics.track(isCustom ? 'protein_range_customized' : 'protein_range_accepted', { min: range.min, max: range.max });
-  analytics.track('onboarding_completed', { goal_type: onboarding.goalType, custom_range: isCustom });
+  analytics.track('onboarding_completed', { goal_type: onboarding.goalType, custom_range: isCustom, open_log: !!opts?.openLog });
+  if (opts?.openLog) {
+    setState(s => ({ flags: { ...s.flags, openLogAfterOnboarding: true } }));
+  }
   return profile;
 }
 
@@ -140,8 +153,10 @@ export function setWeightUnit(unit: WeightUnit): void {
 
 export function setDisplayName(name: string | null): void {
   const profile = getState().profile;
-  if (!profile || !name) return;
-  writeProfile({ ...profile, display_name: name });
+  if (!profile) return;
+  const display_name = name ? normalizeDisplayName(name) || null : null;
+  if (profile.display_name === display_name) return;
+  writeProfile({ ...profile, display_name });
 }
 
 export function updateNotificationPrefs(patch: Partial<Omit<NotificationPreferences, 'user_id'>>): void {

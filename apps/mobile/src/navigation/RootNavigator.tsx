@@ -16,10 +16,13 @@ import { GoalTypeScreen } from '../screens/profile/GoalTypeScreen';
 import { NotificationSettingsScreen } from '../screens/profile/NotificationSettingsScreen';
 import { PaywallScreen } from '../screens/paywall/PaywallScreen';
 import { WelcomeScreen } from '../screens/onboarding/WelcomeScreen';
+import { NameScreen } from '../screens/onboarding/NameScreen';
 import { GoalScreen } from '../screens/onboarding/GoalScreen';
 import { WeightScreen } from '../screens/onboarding/WeightScreen';
 import { RangeScreen } from '../screens/onboarding/RangeScreen';
 import { ReadyScreen } from '../screens/onboarding/ReadyScreen';
+import { DisplayNameScreen } from '../screens/profile/DisplayNameScreen';
+import { FeedbackScreen } from '../screens/today/FeedbackScreen';
 import { LogHomeScreen } from '../screens/log/LogHomeScreen';
 import { SearchScreen } from '../screens/log/SearchScreen';
 import { FoodDetailScreen } from '../screens/log/FoodDetailScreen';
@@ -41,7 +44,8 @@ const plain = { headerShown: false, contentStyle: { backgroundColor: colors.back
 function OnboardingNavigator() {
   return (
     <Onboarding.Navigator screenOptions={plain}>
-      <Onboarding.Screen name="Welcome" component={WelcomeScreen} />
+      <Onboarding.Screen name="Welcome" component={WelcomeScreen} options={{ contentStyle: { backgroundColor: colors.hero } }} />
+      <Onboarding.Screen name="Name" component={NameScreen} />
       <Onboarding.Screen name="Goal" component={GoalScreen} />
       <Onboarding.Screen name="Weight" component={WeightScreen} />
       <Onboarding.Screen name="Range" component={RangeScreen} />
@@ -106,6 +110,8 @@ export function RootNavigator() {
           <Root.Screen name="BodyWeight" component={BodyWeightScreen} />
           <Root.Screen name="GoalTypeSettings" component={GoalTypeScreen} />
           <Root.Screen name="NotificationSettings" component={NotificationSettingsScreen} />
+          <Root.Screen name="DisplayName" component={DisplayNameScreen} />
+          <Root.Screen name="Feedback" component={FeedbackScreen} options={{ presentation: 'modal' }} />
         </>
       )}
     </Root.Navigator>

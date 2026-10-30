@@ -2,7 +2,7 @@ import React from 'react';
 import { Text, type TextProps, type TextStyle } from 'react-native';
 import { colors, typography, type TypographyVariant } from '../theme';
 
-type Tone = 'primary' | 'secondary' | 'tertiary' | 'accent' | 'onAccent' | 'destructive';
+type Tone = 'primary' | 'secondary' | 'tertiary' | 'accent' | 'onAccent' | 'onHero' | 'onHeroMuted' | 'lime' | 'destructive';
 
 const toneColor: Record<Tone, string> = {
   primary: colors.text,
@@ -10,6 +10,9 @@ const toneColor: Record<Tone, string> = {
   tertiary: colors.textTertiary,
   accent: colors.accentText,
   onAccent: colors.textOnAccent,
+  onHero: colors.textOnHero,
+  onHeroMuted: colors.textOnHeroMuted,
+  lime: colors.lime,
   destructive: colors.destructive,
 };
 

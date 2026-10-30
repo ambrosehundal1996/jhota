@@ -1,5 +1,5 @@
-import React, { useEffect } from 'react';
-import { ActivityIndicator, Alert, Image, Linking, StyleSheet, TextInput, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { Alert, Image, Linking, StyleSheet, TextInput, View } from 'react-native';
 import { launchCamera, launchImageLibrary, type ImagePickerResponse } from 'react-native-image-picker';
 import { AppText, Button, Card, EmptyState, Icon, Screen, SheetHeader, showToast } from '../../components';
 import {
@@ -16,6 +16,7 @@ import {
 import type { LogScreenProps } from '../../navigation/types';
 import { useAppStore } from '../../state/appStore';
 import { colors, radii, spacing, typography } from '../../theme';
+import { EstimateProgress } from './EstimateProgress';
 import { closeLog, useLogContext } from './useLogContext';
 
 const PICKER_OPTIONS = { mediaType: 'photo', maxWidth: 1280, maxHeight: 1280, quality: 0.7, includeBase64: false } as const;
@@ -24,6 +25,11 @@ export function PhotoScreen({ navigation, route }: LogScreenProps<'Photo'>) {
   const { date } = useLogContext(route.params);
   const draft = useAppStore(s => s.aiDraft);
   const busy = draft?.status === 'uploading' || draft?.status === 'analyzing';
+  const [runToken, setRunToken] = useState(0);
+  const startEstimate = () => {
+    setRunToken(n => n + 1);
+    void runAnalysis();
+  };
 
   useEffect(() => {
     if (draft?.status === 'ready') navigation.navigate('PhotoReview');
@@ -99,7 +105,7 @@ export function PhotoScreen({ navigation, route }: LogScreenProps<'Photo'>) {
               label="Re-estimate with details"
               variant="filled"
               disabled={!hasNewContext(draft)}
-              onPress={() => void runAnalysis()}
+              onPress={startEstimate}
               testID="clarify-retry"
             />
             {draft.items.length ? (
@@ -109,11 +115,11 @@ export function PhotoScreen({ navigation, route }: LogScreenProps<'Photo'>) {
           </>
         ) : failed ? (
           <>
-            <Button label="Retry" variant="filled" onPress={() => void runAnalysis()} testID="retry-analysis" />
+            <Button label="Retry" variant="filled" onPress={startEstimate} testID="retry-analysis" />
             <Button label="Quick add instead" variant="ghost" onPress={() => { discardDraft(); navigation.replace('QuickAdd', { date }); }} />
           </>
         ) : (
-          <Button label={busy ? 'Estimating…' : 'Estimate protein'} variant="filled" loading={busy} disabled={busy} onPress={() => void runAnalysis()} testID="estimate" />
+          <Button label={busy ? 'Estimating…' : 'Estimate protein'} variant="filled" loading={busy} disabled={busy} onPress={startEstimate} testID="estimate" />
         )
       }
     >
@@ -121,15 +127,12 @@ export function PhotoScreen({ navigation, route }: LogScreenProps<'Photo'>) {
       {draft.photoUri ? (
         <View style={styles.photoWrap}>
           <Image source={{ uri: draft.photoUri }} style={styles.photo} accessibilityLabel="Your meal photo" />
-          {busy ? (
-            <View style={styles.photoOverlay}>
-              <ActivityIndicator color="#fff" />
-              <AppText variant="bodyStrong" style={styles.overlayText}>
-                {draft.status === 'uploading' ? 'Uploading…' : 'Estimating protein…'}
-              </AppText>
-            </View>
-          ) : null}
+          {busy ? <View style={styles.photoOverlay} /> : null}
         </View>
+      ) : null}
+
+      {busy && (draft.status === 'uploading' || draft.status === 'analyzing') ? (
+        <EstimateProgress status={draft.status} runToken={runToken} />
       ) : null}
 
       {notFood ? (
@@ -149,7 +152,7 @@ export function PhotoScreen({ navigation, route }: LogScreenProps<'Photo'>) {
             {draft.error} Your photo is saved here, so you can retry.
           </AppText>
         </Card>
-      ) : (
+      ) : busy ? null : (
         <View style={styles.context}>
           {clarify ? (
             <Card style={styles.clarify} testID="clarification">
@@ -185,12 +188,8 @@ const styles = StyleSheet.create({
   photo: { width: '100%', aspectRatio: 4 / 3 },
   photoOverlay: {
     ...StyleSheet.absoluteFill,
-    backgroundColor: 'rgba(0,0,0,0.35)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.sm,
+    backgroundColor: 'rgba(0,0,0,0.22)',
   },
-  overlayText: { color: '#fff' },
   message: { marginTop: spacing.lg, gap: spacing.xs },
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   context: { marginTop: spacing.lg, gap: spacing.sm },

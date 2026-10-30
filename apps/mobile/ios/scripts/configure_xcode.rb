@@ -58,7 +58,7 @@ end
 
 widget_group = project.main_group.find_subpath('JotaWidget', false) ||
                project.main_group.new_group('JotaWidget', 'JotaWidget')
-%w[JotaWidget.swift WidgetSnapshot.swift ProteinActivityAttributes.swift].each do |name|
+%w[JotaWidget.swift WidgetSnapshot.swift ProteinActivityAttributes.swift WidgetQuickAdd.swift].each do |name|
   ref = ensure_file(widget_group, name)
   widget.source_build_phase.add_file_reference(ref, true)
   app.source_build_phase.add_file_reference(ref, true) if name != 'JotaWidget.swift'

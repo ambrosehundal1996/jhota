@@ -169,6 +169,49 @@ export function quickAdd(args: { grams: number; name?: string; date: LocalDate }
   return log;
 }
 
+const LOCAL_DATE = /^\d{4}-\d{2}-\d{2}$/;
+
+/** Applies a Lock Screen / widget quick-add that was stored in the App Group. */
+export function ingestWidgetQuickAdd(pending: {
+  id: string;
+  grams: number;
+  date: string;
+  loggedAt: string;
+}): FoodLog | undefined {
+  const grams = Math.round(Number(pending.grams));
+  if (!pending.id || getState().logs[pending.id]) return undefined;
+  if (!(grams > 0 && grams <= 500) || !LOCAL_DATE.test(pending.date)) return undefined;
+  const now = pending.loggedAt || nowIso();
+  persistLog({
+    id: pending.id,
+    user_id: getState().userId,
+    log_date: pending.date,
+    logged_at: now,
+    meal_type: null,
+    food_name: 'Quick add',
+    brand: null,
+    serving_quantity: null,
+    serving_unit: null,
+    protein_g: grams,
+    calories: null,
+    carbs_g: null,
+    fat_g: null,
+    source: 'quick_add',
+    external_provider: null,
+    external_food_id: null,
+    custom_food_id: null,
+    ai_analysis_id: null,
+    ai_original_protein_g: null,
+    ai_was_edited: null,
+    created_at: now,
+    updated_at: now,
+    deleted_at: null,
+  });
+  analytics.track('quick_add_used', { protein_g: grams, named: false });
+  analytics.track('widget_quick_action_used', { action: 'quick_add', protein_g: grams });
+  return getState().logs[pending.id];
+}
+
 export function recentToLoggable(recent: RecentFood): LoggableFood {
   return {
     food_name: recent.food_name,

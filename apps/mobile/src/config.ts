@@ -15,6 +15,7 @@ export const appConfig = {
   privacyUrl: read('PRIVACY_URL') || 'https://jota.app/privacy',
   termsUrl: read('TERMS_URL') || 'https://jota.app/terms',
   supportEmail: read('SUPPORT_EMAIL') || 'support@jota.app',
+  feedbackEmail: read('FEEDBACK_EMAIL') || 'ambrosehundal0082@gmail.com',
 } as const;
 
 export const isSupabaseConfigured = () => !!appConfig.supabaseUrl && !!appConfig.supabaseAnonKey;

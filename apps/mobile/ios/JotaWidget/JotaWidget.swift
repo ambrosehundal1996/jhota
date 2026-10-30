@@ -3,13 +3,22 @@ import AppIntents
 import SwiftUI
 import WidgetKit
 
-private let accent = Color(red: 0x1E / 255, green: 0x9E / 255, blue: 0x4A / 255)
-private let ink = Color(red: 0x12 / 255, green: 0x18 / 255, blue: 0x14 / 255)
-private let muted = Color(red: 0xA8 / 255, green: 0xB5 / 255, blue: 0xAC / 255)
-private let track = Color.white.opacity(0.16)
+private let forest = Color(red: 0x10 / 255, green: 0x3B / 255, blue: 0x2D / 255)
+private let cream = Color(red: 0xF7 / 255, green: 0xF8 / 255, blue: 0xF3 / 255)
+private let lime = Color(red: 0xB7 / 255, green: 0xEC / 255, blue: 0x92 / 255)
+private let muted = cream.opacity(0.64)
+private let track = Color.white.opacity(0.14)
 
 private func link(_ path: String) -> URL {
   URL(string: "jota://\(path)?src=widget")!
+}
+
+private func goalRangeCopy(_ snapshot: WidgetSnapshot) -> String {
+  "Goal \(snapshot.goalMin)–\(snapshot.goalMax)g"
+}
+
+private func activityRangeCopy(_ state: ProteinActivityAttributes.ContentState) -> String {
+  state.progressState.supporting(total: state.total, goalMin: state.goalMin, goalMax: state.goalMax)
 }
 
 // MARK: - Timeline
@@ -27,18 +36,29 @@ struct JotaProvider: TimelineProvider {
 
   func getSnapshot(in context: Context, completion: @escaping (JotaEntry) -> Void) {
     let now = Date()
-    let snapshot = WidgetSnapshot.load()?.resolved(for: now) ?? .placeholder
-    completion(JotaEntry(date: now, snapshot: snapshot, isPlaceholder: WidgetSnapshot.load() == nil))
+    completion(
+      JotaEntry(
+        date: now,
+        snapshot: WidgetSnapshot.load()?.resolved(for: now) ?? .placeholder,
+        isPlaceholder: WidgetSnapshot.load() == nil
+      )
+    )
   }
 
   func getTimeline(in context: Context, completion: @escaping (Timeline<JotaEntry>) -> Void) {
     let now = Date()
     let stored = WidgetSnapshot.load()
-    let current = JotaEntry(date: now, snapshot: stored?.resolved(for: now) ?? .placeholder, isPlaceholder: stored == nil)
+    let current = JotaEntry(
+      date: now,
+      snapshot: stored?.resolved(for: now) ?? .placeholder,
+      isPlaceholder: stored == nil
+    )
     let midnight = Calendar.current.startOfDay(for: now.addingTimeInterval(86_400))
     var entries = [current]
     if let stored {
-      entries.append(JotaEntry(date: midnight, snapshot: stored.resolved(for: midnight), isPlaceholder: false))
+      entries.append(
+        JotaEntry(date: midnight, snapshot: stored.resolved(for: midnight), isPlaceholder: false)
+      )
     }
     completion(Timeline(entries: entries, policy: .after(midnight.addingTimeInterval(60))))
   }
@@ -46,66 +66,146 @@ struct JotaProvider: TimelineProvider {
 
 // MARK: - Pieces
 
+struct ProgressHeader: View {
+  let state: WidgetProgressState
+  let total: Int
+  let goalMin: Int
+  let goalMax: Int
+  var numberSize: CGFloat = 28
+  var accessory: Bool = false
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 3) {
+      Text(state.headline)
+        .font(.system(size: headlineSize, weight: .bold, design: .rounded))
+        .foregroundStyle(headlineColor)
+        .minimumScaleFactor(0.55)
+        .lineLimit(1)
+      Text(state.supporting(total: total, goalMin: goalMin, goalMax: goalMax))
+        .font(.system(size: accessory ? 11 : 13, weight: .medium))
+        .foregroundStyle(accessory ? Color.white.opacity(0.78) : muted)
+        .lineLimit(1)
+        .minimumScaleFactor(0.75)
+    }
+    .accessibilityElement(children: .ignore)
+    .accessibilityLabel(state.accessibilityLabel(total: total, goalMin: goalMin, goalMax: goalMax))
+  }
+
+  private var headlineSize: CGFloat {
+    switch state {
+    case .getStarted: return min(18, numberSize * 0.68)
+    case .almostThere: return min(22, numberSize * 0.82)
+    default: return numberSize
+    }
+  }
+
+  private var headlineColor: Color {
+    if accessory { return .white }
+    return state.celebrates ? lime : cream
+  }
+}
+
+struct RangeBar: View {
+  let snapshot: WidgetSnapshot
+  var height: CGFloat = 8
+
+  var body: some View {
+    let layout = snapshot.rangeLayout
+    GeometryReader { geo in
+      let w = geo.size.width
+      ZStack(alignment: .leading) {
+        ZStack(alignment: .leading) {
+          Capsule().fill(track)
+          Capsule()
+            .fill(lime.opacity(0.28))
+            .frame(width: max(4, (layout.maxEnd - layout.minStart) * w))
+            .offset(x: layout.minStart * w)
+          if snapshot.total > 0 {
+            Capsule()
+              .fill(lime)
+              .frame(width: max(6, min(w, layout.current * w)))
+          }
+        }
+        .clipShape(Capsule())
+        tick(at: layout.minStart * w, height: height)
+        tick(at: layout.maxEnd * w, height: height)
+      }
+    }
+    .frame(height: height)
+    .accessibilityHidden(true)
+  }
+
+  private func tick(at x: CGFloat, height: CGFloat) -> some View {
+    Capsule()
+      .fill(lime)
+      .frame(width: 2, height: height + 4)
+      .offset(x: max(0, x - 1))
+  }
+}
+
 struct SnapButton: View {
-  var size: CGFloat = 52
+  var size: CGFloat = 40
 
   var body: some View {
     Link(destination: link("log/photo")) {
       Image(systemName: "camera.fill")
         .font(.system(size: size * 0.38, weight: .semibold))
-        .foregroundStyle(.white)
+        .foregroundStyle(forest)
         .frame(width: size, height: size)
-        .background(Circle().fill(accent))
+        .background(Circle().fill(lime))
     }
     .buttonStyle(.plain)
     .accessibilityLabel("Snap meal")
   }
 }
 
-struct RemainingHero: View {
-  let snapshot: WidgetSnapshot
-  var numberSize: CGFloat = 44
-  var alignment: HorizontalAlignment = .center
+struct QuickLogRow: View {
+  var compact: Bool = false
+  var liveActivity: Bool = false
 
   var body: some View {
-    VStack(alignment: alignment, spacing: 2) {
-      if snapshot.reached {
-        Text("Done")
-          .font(.system(size: numberSize, weight: .bold, design: .rounded))
-          .foregroundStyle(.white)
-          .minimumScaleFactor(0.6)
-          .lineLimit(1)
-        Text("\(snapshot.total)g · goal reached")
-          .font(.system(size: 13, weight: .medium))
-          .foregroundStyle(muted)
+    HStack(spacing: compact ? 6 : 8) {
+      if liveActivity {
+        Button(intent: LogQuickAddLiveIntent(grams: 20)) { addLabel(20) }
+          .buttonStyle(.plain)
+          .accessibilityLabel("Add 20 grams of protein")
+        Button(intent: LogQuickAddLiveIntent(grams: 30)) { addLabel(30) }
+          .buttonStyle(.plain)
+          .accessibilityLabel("Add 30 grams of protein")
       } else {
-        Text("\(snapshot.toGoal)")
-          .font(.system(size: numberSize, weight: .bold, design: .rounded))
-          .foregroundStyle(.white)
-          .minimumScaleFactor(0.5)
-          .lineLimit(1)
-          .accessibilityLabel("\(snapshot.toGoal) grams left")
-        Text("g left")
-          .font(.system(size: 13, weight: .semibold))
-          .foregroundStyle(muted)
+        Button(intent: LogQuickAddIntent(grams: 20)) { addLabel(20) }
+          .buttonStyle(.plain)
+          .accessibilityLabel("Add 20 grams of protein")
+        Button(intent: LogQuickAddIntent(grams: 30)) { addLabel(30) }
+          .buttonStyle(.plain)
+          .accessibilityLabel("Add 30 grams of protein")
       }
+      Link(destination: link("log/quick-add")) {
+        customLabel
+      }
+      .buttonStyle(.plain)
+      .accessibilityLabel("Custom protein amount")
     }
   }
-}
 
-struct RemainingBar: View {
-  let snapshot: WidgetSnapshot
+  private func addLabel(_ grams: Int) -> some View {
+    Text("+\(grams)g")
+      .font(.system(size: compact ? 12 : 13, weight: .heavy, design: .rounded))
+      .foregroundStyle(forest)
+      .frame(maxWidth: .infinity, minHeight: compact ? 32 : 40)
+      .background(Capsule().fill(lime))
+  }
 
-  var body: some View {
-    GeometryReader { geo in
-      ZStack(alignment: .leading) {
-        Capsule().fill(track)
+  private var customLabel: some View {
+    Text("Custom +")
+      .font(.system(size: compact ? 12 : 13, weight: .semibold, design: .rounded))
+      .foregroundStyle(cream)
+      .frame(maxWidth: .infinity, minHeight: compact ? 32 : 40)
+      .background(
         Capsule()
-          .fill(accent)
-          .frame(width: max(6, geo.size.width * snapshot.progress))
-      }
-    }
-    .frame(height: 6)
+          .fill(Color.white.opacity(0.08))
+          .overlay(Capsule().stroke(cream.opacity(0.28), lineWidth: 1))
+      )
   }
 }
 
@@ -116,7 +216,7 @@ struct WeekDots: View {
     HStack(spacing: 8) {
       ForEach(Array(snapshot.week.enumerated()), id: \.offset) { _, day in
         Circle()
-          .fill(day.reached ? accent : (day.total > 0 ? Color.white.opacity(0.35) : track))
+          .fill(day.reached ? lime : (day.total > 0 ? cream.opacity(0.4) : track))
           .frame(width: 8, height: 8)
           .accessibilityLabel(day.reached ? "Goal reached" : "\(day.total) grams")
       }
@@ -126,7 +226,26 @@ struct WeekDots: View {
 
 private extension View {
   func jotaOpaqueBackground() -> some View {
-    containerBackground(for: .widget) { ink }
+    containerBackground(for: .widget) { forest }
+  }
+
+  /// Home-screen widgets need an opaque forest fill. Lock-screen accessory
+  /// families use the system material and must not get that fill.
+  func jotaWidgetChrome() -> some View {
+    modifier(JotaWidgetChrome())
+  }
+}
+
+private struct JotaWidgetChrome: ViewModifier {
+  @Environment(\.widgetFamily) private var family
+
+  func body(content: Content) -> some View {
+    switch family {
+    case .accessoryCircular, .accessoryRectangular, .accessoryInline:
+      content
+    default:
+      content.jotaOpaqueBackground()
+    }
   }
 }
 
@@ -138,118 +257,137 @@ struct JotaWidgetView: View {
 
   var body: some View {
     let s = entry.snapshot
+    let state = s.progressState
     switch family {
     case .accessoryCircular:
       ZStack {
-        Circle().fill(accent)
-        Image(systemName: "camera.fill")
-          .font(.system(size: 18, weight: .bold))
-          .foregroundStyle(.white)
+        AccessoryWidgetBackground()
+        VStack(spacing: -1) {
+          Text(circularValue(state))
+            .font(.system(size: s.reached ? 20 : 18, weight: .bold, design: .rounded))
+            .minimumScaleFactor(0.5)
+            .lineLimit(1)
+          Text(circularCaption(state))
+            .font(.system(size: 10, weight: .semibold))
+        }
       }
-      .widgetURL(link("log/photo"))
-      .accessibilityLabel("Snap meal")
+      .widgetURL(link("today"))
+      .accessibilityLabel(state.accessibilityLabel(total: s.total, goalMin: s.goalMin, goalMax: s.goalMax))
 
     case .accessoryRectangular:
-      HStack(spacing: 10) {
-        ZStack {
-          Circle().fill(accent)
-          Image(systemName: "camera.fill")
-            .font(.system(size: 13, weight: .bold))
-            .foregroundStyle(.white)
-        }
-        .frame(width: 28, height: 28)
-        VStack(alignment: .leading, spacing: 1) {
-          Text(s.reached ? "Goal reached" : "\(s.toGoal)g left")
-            .font(.headline)
-            .foregroundStyle(.white)
-          Text("Snap a meal")
-            .font(.caption2)
-            .foregroundStyle(.white.opacity(0.8))
-        }
-        Spacer(minLength: 0)
+      VStack(alignment: .leading, spacing: 6) {
+        ProgressHeader(
+          state: state,
+          total: s.total,
+          goalMin: s.goalMin,
+          goalMax: s.goalMax,
+          numberSize: 18,
+          accessory: true
+        )
+        QuickLogRow(compact: true)
       }
-      .widgetURL(link("log/photo"))
 
     case .accessoryInline:
-      Text(s.reached ? "Jota · goal reached" : "Jota · \(s.toGoal)g left")
-        .widgetURL(link("log/photo"))
+      Text(inlineCopy(s, state))
+        .widgetURL(link("today"))
 
     case .systemMedium:
-      HStack(alignment: .center, spacing: 16) {
-        VStack(alignment: .leading, spacing: 10) {
-          RemainingHero(snapshot: s, numberSize: 48, alignment: .leading)
-          RemainingBar(snapshot: s)
-          Text("Goal \(s.goalMin)–\(s.goalMax)g")
-            .font(.caption)
-            .foregroundStyle(muted)
+      VStack(alignment: .leading, spacing: 10) {
+        HStack(alignment: .top, spacing: 12) {
+          ProgressHeader(
+            state: state,
+            total: s.total,
+            goalMin: s.goalMin,
+            goalMax: s.goalMax,
+            numberSize: 30
+          )
+          Spacer(minLength: 8)
+          SnapButton(size: 40)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        VStack(spacing: 8) {
-          SnapButton(size: 64)
-          Text("Snap")
-            .font(.caption.weight(.semibold))
-            .foregroundStyle(.white)
-        }
+        RangeBar(snapshot: s)
+        QuickLogRow()
       }
-      .frame(maxWidth: .infinity, maxHeight: .infinity)
+      .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
       .padding(16)
       .widgetURL(link("today"))
 
     case .systemLarge:
-      VStack(alignment: .leading, spacing: 18) {
-        HStack(alignment: .center) {
-          RemainingHero(snapshot: s, numberSize: 56, alignment: .leading)
-          Spacer()
-          VStack(spacing: 8) {
-            SnapButton(size: 64)
-            Text("Snap")
-              .font(.caption.weight(.semibold))
-              .foregroundStyle(.white)
-          }
+      VStack(alignment: .leading, spacing: 16) {
+        HStack(alignment: .top, spacing: 12) {
+          ProgressHeader(
+            state: state,
+            total: s.total,
+            goalMin: s.goalMin,
+            goalMax: s.goalMax,
+            numberSize: 36
+          )
+          Spacer(minLength: 8)
+          SnapButton(size: 44)
         }
-        RemainingBar(snapshot: s)
+        RangeBar(snapshot: s, height: 10)
         HStack {
-          Text("Goal \(s.goalMin)–\(s.goalMax)g")
+          Text(goalRangeCopy(s))
             .font(.caption)
             .foregroundStyle(muted)
           Spacer()
           WeekDots(snapshot: s)
         }
+        QuickLogRow()
         Spacer(minLength: 0)
-        HStack(spacing: 8) {
-          Link(destination: link("log/quick-add")) {
-            Label("Quick add", systemImage: "bolt.fill")
-              .font(.caption.weight(.semibold))
-              .foregroundStyle(.white)
-              .frame(maxWidth: .infinity, minHeight: 40)
-              .background(Capsule().fill(Color.white.opacity(0.12)))
-          }
-          Link(destination: link("log/search")) {
-            Label("Search", systemImage: "magnifyingglass")
-              .font(.caption.weight(.semibold))
-              .foregroundStyle(.white)
-              .frame(maxWidth: .infinity, minHeight: 40)
-              .background(Capsule().fill(Color.white.opacity(0.12)))
-          }
-        }
       }
       .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
       .padding(16)
       .widgetURL(link("today"))
 
     default:
-      VStack(spacing: 0) {
+      VStack(alignment: .leading, spacing: 8) {
+        HStack(alignment: .top) {
+          ProgressHeader(
+            state: state,
+            total: s.total,
+            goalMin: s.goalMin,
+            goalMax: s.goalMax,
+            numberSize: 22
+          )
+          Spacer(minLength: 4)
+          SnapButton(size: 34)
+        }
+        RangeBar(snapshot: s, height: 6)
         Spacer(minLength: 0)
-        RemainingHero(snapshot: s, numberSize: 42, alignment: .center)
-          .frame(maxWidth: .infinity)
-        Spacer(minLength: 8)
-        SnapButton(size: 52)
+        QuickLogRow(compact: true)
       }
-      .frame(maxWidth: .infinity, maxHeight: .infinity)
-      .padding(.horizontal, 14)
-      .padding(.top, 12)
-      .padding(.bottom, 14)
+      .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+      .padding(14)
       .widgetURL(link("today"))
+    }
+  }
+
+  private func circularValue(_ state: WidgetProgressState) -> String {
+    switch state {
+    case .getStarted: return "0"
+    case .remaining(let left), .almostThere(let left): return "\(left)"
+    case .goalHit, .aboveMax: return "✓"
+    }
+  }
+
+  private func circularCaption(_ state: WidgetProgressState) -> String {
+    switch state {
+    case .getStarted: return "go"
+    case .remaining, .almostThere: return "left"
+    case .goalHit, .aboveMax: return "hit"
+    }
+  }
+
+  private func inlineCopy(_ snapshot: WidgetSnapshot, _ state: WidgetProgressState) -> String {
+    switch state {
+    case .getStarted:
+      return "Jota · Let's go · \(goalRangeCopy(snapshot))"
+    case .remaining(let left), .almostThere(let left):
+      return "Jota · \(left)g left · \(snapshot.goalMin)–\(snapshot.goalMax)g"
+    case .goalHit:
+      return "Jota · Goal hit · \(snapshot.total)g"
+    case .aboveMax(let total):
+      return "Jota · \(total)g today"
     }
   }
 }
@@ -260,80 +398,74 @@ struct JotaWidget: Widget {
   var body: some WidgetConfiguration {
     StaticConfiguration(kind: kind, provider: JotaProvider()) { entry in
       JotaWidgetView(entry: entry)
-        .jotaOpaqueBackground()
+        .jotaWidgetChrome()
         .redacted(reason: entry.isPlaceholder ? .placeholder : [])
     }
-    .configurationDisplayName("Protein left")
-    .description("See how much protein you have left, and snap a meal in one tap.")
-    .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
+    .configurationDisplayName("Protein to go")
+    .description("See remaining protein, add 20g or 30g, or snap a meal.")
+    .supportedFamilies([
+      .systemSmall, .systemMedium, .systemLarge,
+      .accessoryCircular, .accessoryRectangular, .accessoryInline,
+    ])
     .contentMarginsDisabled()
     .containerBackgroundRemovable(false)
   }
 }
 
-struct JotaLockScreenWidget: Widget {
-  let kind = "JotaLockScreenWidget"
-
-  var body: some WidgetConfiguration {
-    StaticConfiguration(kind: kind, provider: JotaProvider()) { entry in
-      JotaWidgetView(entry: entry)
-        .redacted(reason: entry.isPlaceholder ? .placeholder : [])
-    }
-    .configurationDisplayName("Snap meal")
-    .description("Snap a meal from the Lock Screen.")
-    .supportedFamilies([.accessoryCircular, .accessoryRectangular, .accessoryInline])
-  }
-}
-
-// MARK: - Lock screen Live Activity (Spotify-style card)
+// MARK: - Lock screen Live Activity
 
 struct ProteinLiveActivity: Widget {
   var body: some WidgetConfiguration {
     ActivityConfiguration(for: ProteinActivityAttributes.self) { context in
-      HStack(spacing: 14) {
-        VStack(alignment: .leading, spacing: 6) {
-          Text(context.state.reached ? "Goal reached" : "\(context.state.toGoal)g left")
-            .font(.system(size: 22, weight: .bold, design: .rounded))
-            .foregroundStyle(.white)
-          Text(context.state.reached ? "\(context.state.total)g today" : "protein still to eat")
-            .font(.subheadline.weight(.medium))
-            .foregroundStyle(muted)
-          RemainingBar(snapshot: barSnapshot(context.state))
-            .padding(.top, 4)
+      let state = context.state.progressState
+      VStack(alignment: .leading, spacing: 10) {
+        HStack(alignment: .top, spacing: 12) {
+          ProgressHeader(
+            state: state,
+            total: context.state.total,
+            goalMin: context.state.goalMin,
+            goalMax: context.state.goalMax,
+            numberSize: 26
+          )
+          Spacer(minLength: 8)
+          Link(destination: link("log/photo")) {
+            Image(systemName: "camera.fill")
+              .font(.system(size: 15, weight: .semibold))
+              .foregroundStyle(forest)
+              .frame(width: 40, height: 40)
+              .background(Circle().fill(lime))
+          }
+          .accessibilityLabel("Snap meal")
         }
-        Spacer(minLength: 8)
-        Link(destination: link("log/photo")) {
-          Image(systemName: "camera.fill")
-            .font(.system(size: 22, weight: .semibold))
-            .foregroundStyle(.white)
-            .frame(width: 56, height: 56)
-            .background(Circle().fill(accent))
-        }
+        RangeBar(snapshot: barSnapshot(context.state))
+        QuickLogRow(liveActivity: true)
       }
       .padding(.horizontal, 20)
       .padding(.vertical, 16)
-      .activityBackgroundTint(ink)
-      .activitySystemActionForegroundColor(.white)
+      .activityBackgroundTint(forest)
+      .activitySystemActionForegroundColor(cream)
       .widgetURL(link("today"))
     } dynamicIsland: { context in
       DynamicIsland {
         DynamicIslandExpandedRegion(.leading) {
-          Text(context.state.reached ? "Done" : "\(context.state.toGoal)g")
+          Text(islandLeading(context.state.progressState, total: context.state.total, left: context.state.toGoal))
             .font(.title2.bold())
         }
         DynamicIslandExpandedRegion(.trailing) {
           Image(systemName: "camera.fill")
-            .foregroundStyle(accent)
+            .foregroundStyle(lime)
         }
         DynamicIslandExpandedRegion(.bottom) {
-          Text(context.state.reached ? "Goal reached" : "protein left today")
+          Text(activityRangeCopy(context.state))
             .font(.caption)
             .foregroundStyle(.secondary)
+            .lineLimit(1)
+            .minimumScaleFactor(0.8)
         }
       } compactLeading: {
         Image(systemName: "camera.fill")
       } compactTrailing: {
-        Text(context.state.reached ? "✓" : "\(context.state.toGoal)g")
+        Text(islandCompact(context.state.progressState, left: context.state.toGoal, total: context.state.total))
           .font(.caption.weight(.bold))
       } minimal: {
         Text(context.state.reached ? "✓" : "\(context.state.toGoal)")
@@ -343,10 +475,28 @@ struct ProteinLiveActivity: Widget {
     }
   }
 
+  private func islandLeading(_ state: WidgetProgressState, total: Int, left: Int) -> String {
+    switch state {
+    case .getStarted: return "Start"
+    case .remaining, .almostThere: return "\(left)g"
+    case .goalHit: return "Hit"
+    case .aboveMax: return "\(total)g"
+    }
+  }
+
+  private func islandCompact(_ state: WidgetProgressState, left: Int, total: Int) -> String {
+    switch state {
+    case .getStarted: return "0g"
+    case .remaining, .almostThere: return "\(left)g"
+    case .goalHit: return "✓"
+    case .aboveMax: return "\(total)g"
+    }
+  }
+
   private func barSnapshot(_ state: ProteinActivityAttributes.ContentState) -> WidgetSnapshot {
     WidgetSnapshot(
       version: 1, date: "", total: state.total, goalMin: state.goalMin, goalMax: state.goalMax,
-      toGoal: state.toGoal, reached: state.reached, isOverride: false, week: [], updatedAt: ""
+      toGoal: state.toGoal, firstName: state.firstName, reached: state.reached, isOverride: false, week: [], updatedAt: ""
     )
   }
 }
@@ -383,7 +533,6 @@ struct SnapMealControl: ControlWidget {
 struct JotaWidgetBundle: WidgetBundle {
   var body: some Widget {
     JotaWidget()
-    JotaLockScreenWidget()
     ProteinLiveActivity()
     if #available(iOS 18.0, *) {
       SnapMealControl()

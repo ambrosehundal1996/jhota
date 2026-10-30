@@ -4,22 +4,24 @@ import Svg, { Circle, Path } from 'react-native-svg';
 import { colors, spacing } from '../theme';
 import { AppText } from './AppText';
 
-export function BrandMark({ size = 26 }: { size?: number }) {
+export function BrandMark({ size = 26, inverted = false }: { size?: number; inverted?: boolean }) {
   return (
-    <View style={[styles.mark, { width: size, height: size, borderRadius: size * 0.28 }]}>
+    <View style={[styles.mark, inverted && styles.markInverted, { width: size, height: size, borderRadius: size * 0.28 }]}>
       <Svg width={size * 0.62} height={size * 0.62} viewBox="0 0 24 24">
-        <Circle cx="12" cy="12" r="8.5" stroke={colors.accentTintStrong} strokeWidth={3.4} fill="none" />
-        <Path d="M12 3.5a8.5 8.5 0 018.5 8.5" stroke={colors.accent} strokeWidth={3.4} strokeLinecap="round" fill="none" />
+        <Circle cx="12" cy="12" r="8.5" stroke={inverted ? colors.heroSurface : colors.accentTintStrong} strokeWidth={3.4} fill="none" />
+        <Path d="M12 3.5a8.5 8.5 0 018.5 8.5" stroke={inverted ? colors.lime : colors.accent} strokeWidth={3.4} strokeLinecap="round" fill="none" />
       </Svg>
     </View>
   );
 }
 
-export function Wordmark() {
+export function Wordmark({ inverted = false }: { inverted?: boolean }) {
   return (
     <View style={styles.row} accessibilityLabel="Jota">
-      <BrandMark />
-      <AppText variant="h3">jota</AppText>
+      <BrandMark inverted={inverted} />
+      <AppText variant="h3" tone={inverted ? 'onHero' : 'primary'}>
+        jota
+      </AppText>
     </View>
   );
 }
@@ -39,10 +41,10 @@ export function HeroRing({ size = 360 }: { size?: number }) {
   };
   return (
     <Svg width={size} height={size} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-      <Circle cx={c} cy={c} r={r + 18} stroke={colors.accentTint} strokeWidth={1} fill="none" />
-      <Circle cx={c} cy={c} r={r} stroke={colors.accentTint} strokeWidth={stroke} fill="none" />
-      <Path d={arc(20, 75)} stroke={colors.accent} strokeWidth={stroke} strokeLinecap="round" fill="none" />
-      <Path d={arc(200, 262)} stroke={colors.accent} strokeWidth={stroke} strokeLinecap="round" fill="none" />
+      <Circle cx={c} cy={c} r={r + 18} stroke={colors.heroSurface} strokeWidth={1} fill="none" />
+      <Circle cx={c} cy={c} r={r} stroke={colors.heroSurface} strokeWidth={stroke} fill="none" />
+      <Path d={arc(20, 75)} stroke={colors.lime} strokeWidth={stroke} strokeLinecap="round" fill="none" />
+      <Path d={arc(200, 262)} stroke={colors.lime} strokeWidth={stroke} strokeLinecap="round" fill="none" />
     </Svg>
   );
 }
@@ -50,4 +52,5 @@ export function HeroRing({ size = 360 }: { size?: number }) {
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   mark: { backgroundColor: colors.accentTint, alignItems: 'center', justifyContent: 'center' },
+  markInverted: { backgroundColor: colors.heroSurface },
 });

@@ -1,5 +1,12 @@
 import { completeOnboarding, setOnboardingGoal, setOnboardingWeight } from '../src/features/profile/actions';
-import { deleteFoodLog, quickAdd, removeDailyOverride, setDailyOverride, undoLogs } from '../src/features/logging/actions';
+import {
+  deleteFoodLog,
+  ingestWidgetQuickAdd,
+  quickAdd,
+  removeDailyOverride,
+  setDailyOverride,
+  undoLogs,
+} from '../src/features/logging/actions';
 import { getState, initialAppData, useAppStore } from '../src/state/appStore';
 import { selectDay } from '../src/state/selectors';
 
@@ -57,4 +64,13 @@ test('delete and undo restore a log; undoing an add removes it', () => {
   expect(day().total.total).toBe(50);
   undoLogs([log.id]);
   expect(day().total.total).toBe(0);
+});
+
+test('widget quick-add ingest writes a log once', () => {
+  const pending = { id: 'widget-log-1', grams: 25, date: DATE, loggedAt: '2026-10-09T18:30:00.000Z' };
+  expect(ingestWidgetQuickAdd(pending)?.protein_g).toBe(25);
+  expect(day().total.total).toBe(25);
+  expect(ingestWidgetQuickAdd(pending)).toBeUndefined();
+  expect(Object.values(getState().logs)).toHaveLength(1);
+  expect(ingestWidgetQuickAdd({ ...pending, id: 'widget-log-2', grams: 0 })).toBeUndefined();
 });

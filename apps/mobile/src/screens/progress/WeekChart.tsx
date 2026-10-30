@@ -1,9 +1,11 @@
 import type { LocalDate, ProgressDay, ProteinRange } from '@jota/domain';
 import React from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
-import { AppText, Icon } from '../../components';
+import { AppText } from '../../components';
 import { colors, radii, spacing } from '../../theme';
 import { formatShortDay, weekdayInitial } from '../../utils/format';
+
+const VALUE_H = 16;
 
 interface Props {
   days: ProgressDay[];
@@ -14,13 +16,13 @@ interface Props {
   height?: number;
 }
 
-/** Seven bars with a goal line at the minimum. Reached days get a check, not just a color. */
+/** Seven bars with a goal line at the minimum. Each bar shows that day's protein total. */
 export function WeekChart({ days, range, today, selected, onSelect, height = 180 }: Props) {
   const top = Math.max(range.max, ...days.map(d => d.total)) * 1.12 || 1;
   const goalY = (range.min / top) * height;
 
   return (
-    <View style={[styles.wrap, { height: height + 44 }]}>
+    <View style={[styles.wrap, { height: height + 44 + VALUE_H }]}>
       <View style={[styles.goalLine, { bottom: goalY + 24 }]} pointerEvents="none">
         <View style={styles.dash} />
         <AppText variant="caption" tone="tertiary" style={styles.goalLabel}>
@@ -32,6 +34,7 @@ export function WeekChart({ days, range, today, selected, onSelect, height = 180
           const barHeight = day.total > 0 ? Math.max(6, (day.total / top) * height) : 4;
           const isSelected = day.date === selected;
           const isToday = day.date === today;
+          const grams = Math.round(day.total);
           const status = day.reached ? 'goal reached' : day.tracked ? `${Math.max(0, Math.ceil(range.min - day.total))} grams to goal` : 'nothing logged';
           return (
             <Pressable
@@ -40,14 +43,17 @@ export function WeekChart({ days, range, today, selected, onSelect, height = 180
               style={styles.column}
               accessibilityRole="button"
               accessibilityState={{ selected: isSelected }}
-              accessibilityLabel={`${formatShortDay(day.date)}, ${Math.round(day.total)} grams, ${status}`}
+              accessibilityLabel={`${formatShortDay(day.date)}, ${grams} grams, ${status}`}
             >
-              <View style={[styles.barArea, { height }]}>
-                {day.reached ? (
-                  <View style={styles.check}>
-                    <Icon name="check" size={12} color={colors.accentText} strokeWidth={2.6} />
-                  </View>
-                ) : null}
+              <View style={[styles.barArea, { height: height + VALUE_H }]}>
+                <AppText
+                  variant="captionStrong"
+                  tone={day.reached ? 'accent' : day.tracked ? 'primary' : 'tertiary'}
+                  style={styles.barValue}
+                  numberOfLines={1}
+                >
+                  {grams}
+                </AppText>
                 <View
                   style={[
                     styles.bar,
@@ -81,14 +87,6 @@ const styles = StyleSheet.create({
   barTracked: { backgroundColor: colors.neutralBar },
   barEmpty: { backgroundColor: colors.track },
   barSelected: { borderWidth: 2, borderColor: colors.text },
-  check: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: colors.accentTint,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.xs,
-  },
+  barValue: { fontSize: 11, lineHeight: 14, marginBottom: 2 },
   dayLabel: { marginTop: spacing.sm, height: 18 },
 });

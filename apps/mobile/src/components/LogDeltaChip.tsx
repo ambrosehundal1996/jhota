@@ -33,7 +33,7 @@ export function LogDeltaChip() {
       style={[styles.chip, motion]}
       accessibilityLiveRegion="polite"
     >
-      <AppText variant="captionStrong" tone="accent">
+      <AppText variant="captionStrong" tone="lime">
         {pulse.label}
       </AppText>
     </Animated.View>
@@ -49,6 +49,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm + 2,
     paddingVertical: 5,
     borderRadius: radii.sm,
-    backgroundColor: colors.accentTint,
+    backgroundColor: colors.heroSurface,
   },
 });

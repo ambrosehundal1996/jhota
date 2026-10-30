@@ -1,4 +1,4 @@
-import React, { forwardRef } from 'react';
+import React, { forwardRef, useState } from 'react';
 import { StyleSheet, TextInput, View, type TextInputProps } from 'react-native';
 import { colors, radii, spacing, typography } from '../theme';
 import { AppText } from './AppText';
@@ -12,7 +12,11 @@ interface Props extends TextInputProps {
 
 export type TextFieldRef = React.ComponentRef<typeof TextInput>;
 
-export const TextField = forwardRef<TextFieldRef, Props>(function TextFieldInner({ label, suffix, error, size = 'regular', style, ...rest }, ref) {
+export const TextField = forwardRef<TextFieldRef, Props>(function TextFieldInner(
+  { label, suffix, error, size = 'regular', style, onFocus, onBlur, ...rest },
+  ref,
+) {
+  const [focused, setFocused] = useState(false);
   return (
     <View style={styles.wrap}>
       {label ? (
@@ -20,11 +24,27 @@ export const TextField = forwardRef<TextFieldRef, Props>(function TextFieldInner
           {label}
         </AppText>
       ) : null}
-      <View style={[styles.field, size === 'large' && styles.fieldLarge, !!error && styles.fieldError]}>
+      <View
+        style={[
+          styles.field,
+          size === 'large' && styles.fieldLarge,
+          focused && styles.fieldFocused,
+          !!error && styles.fieldError,
+          rest.multiline && styles.fieldMultiline,
+        ]}
+      >
         <TextInput
           ref={ref}
           placeholderTextColor={colors.textTertiary}
           accessibilityLabel={label}
+          onFocus={e => {
+            setFocused(true);
+            onFocus?.(e);
+          }}
+          onBlur={e => {
+            setFocused(false);
+            onBlur?.(e);
+          }}
           style={[size === 'large' ? styles.inputLarge : styles.input, style]}
           {...rest}
         />
@@ -52,11 +72,13 @@ const styles = StyleSheet.create({
     minHeight: 50,
     paddingHorizontal: spacing.lg,
     borderRadius: radii.md,
-    backgroundColor: colors.surface,
+    backgroundColor: colors.surfaceRaised,
     borderWidth: 1,
     borderColor: colors.border,
   },
   fieldLarge: { minHeight: 64 },
+  fieldMultiline: { alignItems: 'flex-start' },
+  fieldFocused: { borderColor: colors.accent, borderWidth: 1.5 },
   fieldError: { borderColor: colors.destructive },
   input: { flex: 1, ...typography.body, color: colors.text, paddingVertical: spacing.md },
   inputLarge: { flex: 1, ...typography.h2, color: colors.text, paddingVertical: spacing.md },

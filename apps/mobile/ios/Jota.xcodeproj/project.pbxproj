@@ -15,16 +15,18 @@
 		3E946E3B804936F61FAC7F6E /* ProteinActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 231B1F9EE2E8D11BDA8A43DF /* ProteinActivityAttributes.swift */; };
 		4C94B496236A20CA7F4A5C07 /* WidgetSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 786F02CE47ABCAC12F06F308 /* WidgetSnapshot.swift */; };
 		4F4E25B3E2076F7DD2093A58 /* SharedWidgetStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = EBF07686F2969AC5D6A7642D /* SharedWidgetStore.swift */; };
-		B4E29C38D05E5F12B7C3D9E2 /* Haptics.swift in Sources */ = {isa = PBXBuildFile; fileRef = A3F18B27C94D4E01A6B2C8D1 /* Haptics.swift */; };
-		D604BE5AF2707134D9E5FB04 /* Haptics.m in Sources */ = {isa = PBXBuildFile; fileRef = C5F3AD49E16F6023C8D4EAF3 /* Haptics.m */; };
 		761780ED2CA45674006654EE /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 761780EC2CA45674006654EE /* AppDelegate.swift */; };
 		7B868B34112F15C88D28B833 /* ProteinActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 231B1F9EE2E8D11BDA8A43DF /* ProteinActivityAttributes.swift */; };
 		801DAB115A852E57966F2BC8 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */; };
 		81AB9BB82411601600AC10FF /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */; };
 		9C4324F02CF3512186A77DF1 /* AppIntents.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 512E239729899F2C79D55530 /* AppIntents.framework */; };
+		B4E29C38D05E5F12B7C3D9E2 /* Haptics.swift in Sources */ = {isa = PBXBuildFile; fileRef = A3F18B27C94D4E01A6B2C8D1 /* Haptics.swift */; };
+		B6C8C208E11FD1AB085D43F4 /* WidgetQuickAdd.swift in Sources */ = {isa = PBXBuildFile; fileRef = ECC38EF9614FDF0BFA40EE1E /* WidgetQuickAdd.swift */; };
 		C2F20ED3088BCC77D7053CE0 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6E5CCC3287E66E8F1D96454F /* Foundation.framework */; };
 		C4D65500E49B79A013770DE9 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 2C4E502DC937DBD9F92178EC /* WidgetKit.framework */; };
 		C91C201EA9D9D2AEEF9CCE25 /* JotaWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB7A460855143A9342033489 /* JotaWidget.swift */; };
+		D604BE5AF2707134D9E5FB04 /* Haptics.m in Sources */ = {isa = PBXBuildFile; fileRef = C5F3AD49E16F6023C8D4EAF3 /* Haptics.m */; };
+		D67D72831C83927C76414D73 /* WidgetQuickAdd.swift in Sources */ = {isa = PBXBuildFile; fileRef = ECC38EF9614FDF0BFA40EE1E /* WidgetQuickAdd.swift */; };
 		DAAB91B74F4B938FA8291412 /* JotaWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = BCFC22A3D20E0960CA2FAD9C /* JotaWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		E58C09787DB9CB4C859AFF70 /* ActivityKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 17463178D0FE834A238E41AC /* ActivityKit.framework */; };
 /* End PBXBuildFile section */
@@ -74,12 +76,13 @@
 		81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = LaunchScreen.storyboard; path = Jota/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		82609F7AA51255C561E84C93 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS18.0.sdk/System/Library/Frameworks/SwiftUI.framework; sourceTree = DEVELOPER_DIR; };
 		931B35169E38CF5ADC506F0F /* SharedWidgetStore.m */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.objc; name = SharedWidgetStore.m; path = Jota/SharedWidgetStore.m; sourceTree = "<group>"; };
+		A3F18B27C94D4E01A6B2C8D1 /* Haptics.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = Haptics.swift; path = Jota/Haptics.swift; sourceTree = "<group>"; };
 		A68E9C58B5F08C30C8EADF5A /* Jota-Bridging-Header.h */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.h; name = "Jota-Bridging-Header.h"; path = "Jota/Jota-Bridging-Header.h"; sourceTree = "<group>"; };
 		AB7A460855143A9342033489 /* JotaWidget.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = JotaWidget.swift; sourceTree = "<group>"; };
 		BCFC22A3D20E0960CA2FAD9C /* JotaWidget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = JotaWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
-		A3F18B27C94D4E01A6B2C8D1 /* Haptics.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = Haptics.swift; path = Jota/Haptics.swift; sourceTree = "<group>"; };
 		C5F3AD49E16F6023C8D4EAF3 /* Haptics.m */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.objc; name = Haptics.m; path = Jota/Haptics.m; sourceTree = "<group>"; };
 		EBF07686F2969AC5D6A7642D /* SharedWidgetStore.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = SharedWidgetStore.swift; path = Jota/SharedWidgetStore.swift; sourceTree = "<group>"; };
+		ECC38EF9614FDF0BFA40EE1E /* WidgetQuickAdd.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WidgetQuickAdd.swift; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
 
@@ -183,6 +186,7 @@
 				5EE318C6715844E800773E9E /* Info.plist */,
 				57B08D96F58420D93F36D296 /* JotaWidget.entitlements */,
 				231B1F9EE2E8D11BDA8A43DF /* ProteinActivityAttributes.swift */,
+				ECC38EF9614FDF0BFA40EE1E /* WidgetQuickAdd.swift */,
 			);
 			path = JotaWidget;
 			sourceTree = "<group>";
@@ -389,6 +393,7 @@
 				D604BE5AF2707134D9E5FB04 /* Haptics.m in Sources */,
 				24765C1CDC14DE1E83721F6F /* WidgetSnapshot.swift in Sources */,
 				3E946E3B804936F61FAC7F6E /* ProteinActivityAttributes.swift in Sources */,
+				B6C8C208E11FD1AB085D43F4 /* WidgetQuickAdd.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -399,6 +404,7 @@
 				C91C201EA9D9D2AEEF9CCE25 /* JotaWidget.swift in Sources */,
 				4C94B496236A20CA7F4A5C07 /* WidgetSnapshot.swift in Sources */,
 				7B868B34112F15C88D28B833 /* ProteinActivityAttributes.swift in Sources */,
+				D67D72831C83927C76414D73 /* WidgetQuickAdd.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

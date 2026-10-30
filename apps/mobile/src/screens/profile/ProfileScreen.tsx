@@ -110,6 +110,7 @@ export function ProfileScreen() {
 
       <SectionLabel>Your plan</SectionLabel>
       <ListGroup>
+        <ListRow title="Name" value={name || 'Not set'} onPress={() => navigation.navigate('DisplayName')} />
         <ListRow
           title="Daily protein goal"
           subtitle={profile.protein_goal_is_custom ? 'Custom range' : 'Suggested from body weight'}

@@ -1,4 +1,4 @@
-import { completeOnboarding, keepRangeAfterWeightChange, saveBodyWeight, saveManualRange, setOnboardingGoal, setOnboardingWeight, setWeightUnit, confirmRecalculatedRange } from '../src/features/profile/actions';
+import { completeOnboarding, keepRangeAfterWeightChange, saveBodyWeight, saveManualRange, setOnboardingGoal, setOnboardingName, setOnboardingWeight, setWeightUnit, confirmRecalculatedRange } from '../src/features/profile/actions';
 import { getState, initialAppData, useAppStore } from '../src/state/appStore';
 import { storage } from '../src/state/storage';
 
@@ -10,6 +10,7 @@ async function relaunch() {
 }
 
 function onboard(weight: number, range: { min: number; max: number }, isCustom: boolean) {
+  setOnboardingName('Ambrose');
   setOnboardingGoal('build_muscle');
   setOnboardingWeight(weight, 'lb');
   completeOnboarding(range, isCustom);
@@ -60,4 +61,17 @@ test('profile writes are queued for sync', () => {
   onboard(180, { min: 125, max: 180 }, false);
   const tables = getState().outbox.map(item => item.table);
   expect(tables).toEqual(expect.arrayContaining(['protein_tracker_profiles', 'notification_preferences']));
+});
+
+test('onboarding stores the name on the profile', () => {
+  onboard(180, { min: 125, max: 180 }, false);
+  expect(getState().profile?.display_name).toBe('Ambrose');
+});
+
+test('logging first protein after onboarding sets a pending log launch', () => {
+  setOnboardingName('Ambrose');
+  setOnboardingGoal('build_muscle');
+  setOnboardingWeight(180, 'lb');
+  completeOnboarding({ min: 125, max: 180 }, false, { openLog: true });
+  expect(getState().flags.openLogAfterOnboarding).toBe(true);
 });

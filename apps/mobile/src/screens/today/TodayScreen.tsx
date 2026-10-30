@@ -1,16 +1,13 @@
 import { useNavigation } from '@react-navigation/native';
 import { computeGoalStreak, type RecentFood } from '@jota/domain';
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import {
   AppText,
   Chip,
-  CountUpText,
   EmptyState,
   Icon,
-  LogDeltaChip,
   OfflineBanner,
-  ProgressRing,
   Screen,
   SectionLabel,
   showToast,
@@ -20,9 +17,10 @@ import { relogRecent, removeDailyOverride, setDailyOverride, undoLogs } from '..
 import { useDay, useRecents, useTotalsByDate } from '../../hooks/useAppData';
 import { useLocalToday } from '../../hooks/useLocalToday';
 import { openLog } from '../../navigation/openLog';
-import { useAppStore } from '../../state/appStore';
-import { colors, radii, shadows, spacing } from '../../theme';
-import { formatTodayHeader, rangeLabel } from '../../utils/format';
+import { getState, setState } from '../../state/appStore';
+import { colors, hitSlop, radii, shadows, spacing } from '../../theme';
+import { formatTodayHeader } from '../../utils/format';
+import { DailyProteinProgress } from './DailyProteinProgress';
 import { LoggedFoodsCard } from './LoggedFoodsCard';
 import { NotificationPromptCard } from './NotificationPromptCard';
 import { OverrideBanner } from './OverrideBanner';
@@ -33,14 +31,18 @@ export function TodayScreen() {
   const day = useDay(today);
   const totals = useTotalsByDate();
   const recents = useRecents(10);
-  const celebrating = useAppStore(s => s.flags.pendingCelebrationDate === today);
   const offline = useIsOffline();
+
+  useEffect(() => {
+    if (!getState().flags.openLogAfterOnboarding) return;
+    setState(s => ({ flags: { ...s.flags, openLogAfterOnboarding: false } }));
+    openLog(navigation, 'LogHome', { date: today, src: 'onboarding' });
+  }, [navigation, today]);
 
   const streak = useMemo(() => computeGoalStreak(totals, today, day.range.min), [totals, today, day.range.min]);
   const hasAnything = day.logs.length > 0 || !!day.override;
   const total = Math.round(day.total.total);
   const ctx = { date: today, src: 'today' as const };
-  const over = Math.round(day.total.total - day.range.min);
 
   const logAgain = (recent: RecentFood) => {
     const log = relogRecent(recent, today);
@@ -56,10 +58,6 @@ export function TodayScreen() {
       onPress: () => previous !== undefined && setDailyOverride(today, previous),
     });
   };
-
-  const ringLabel = day.status.reached
-    ? `${total} grams today. Goal reached.`
-    : `${total} grams today. ${day.status.toGoal} grams to goal.`;
 
   return (
     <Screen edges={['top']} testID="today-screen">
@@ -77,58 +75,34 @@ export function TodayScreen() {
 
       {offline ? <OfflineBanner /> : null}
 
-      <View style={styles.hero}>
-        <View>
-          <LogDeltaChip />
-          <ProgressRing
-            progress={day.status.progress}
-            size={232}
-            strokeWidth={16}
-            pulseKey={celebrating ? today : null}
-            accessibilityLabel={ringLabel}
-          >
-            <View style={styles.totalRow}>
-              <CountUpText variant="display" value={total} testID="today-total" />
-              <AppText variant="h2" tone="secondary">
-                g
-              </AppText>
-            </View>
-            <AppText variant="caption" tone="tertiary">
-              {day.total.source === 'override' ? 'total set' : 'protein today'}
-            </AppText>
-          </ProgressRing>
-        </View>
-
-        {over > 0 && day.status.reached ? (
-          <AppText variant="h3" tone="secondary" style={styles.status}>
-            +{over}g over
-          </AppText>
-        ) : day.status.reached ? (
-          <View style={styles.reached} accessibilityLiveRegion="polite">
-            <Icon name="check" size={18} color={colors.accentText} strokeWidth={2.4} />
-            <AppText variant="h3" tone="accent">
-              Goal reached
-            </AppText>
-          </View>
-        ) : (
-          <AppText variant="h3" style={styles.status}>
-            {day.status.toGoal}g to goal
-          </AppText>
-        )}
-        <AppText variant="caption" tone="secondary">
-          Goal range: {rangeLabel(day.range)}
-        </AppText>
-      </View>
+      <DailyProteinProgress
+        total={total}
+        range={day.range}
+        status={day.status}
+        source={day.total.source === 'override' ? 'override' : 'logged'}
+      />
 
       <View style={styles.actions}>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Log food"
+          accessibilityLabel="Log protein"
           onPress={() => openLog(navigation, 'LogHome', ctx)}
           style={({ pressed }) => [styles.logButton, pressed && styles.logButtonPressed]}
           testID="log-food"
         >
           <Icon name="plus" size={40} color={colors.white} strokeWidth={2.4} />
+        </Pressable>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Send feedback"
+          hitSlop={hitSlop}
+          onPress={() => navigation.navigate('Feedback')}
+          style={({ pressed }) => [styles.feedback, pressed && styles.pressed]}
+          testID="send-feedback"
+        >
+          <AppText variant="caption" tone="accent">
+            Send feedback
+          </AppText>
         </Pressable>
       </View>
 
@@ -200,11 +174,8 @@ const styles = StyleSheet.create({
     marginTop: spacing.lg,
     marginBottom: spacing.md,
   },
-  hero: { alignItems: 'center', gap: spacing.xs, marginTop: spacing.lg },
-  totalRow: { flexDirection: 'row', alignItems: 'baseline' },
-  status: { marginTop: spacing.lg },
-  reached: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginTop: spacing.lg },
-  actions: { marginTop: spacing.xl, alignItems: 'center' },
+  actions: { marginTop: spacing.xl, alignItems: 'center', gap: spacing.md },
+  feedback: { paddingVertical: spacing.sm },
   logButton: {
     width: 84,
     height: 84,

@@ -73,30 +73,46 @@ export function isProgressReminderEligible(args: {
   return prefs.enabled && prefs.progressReminder && totalToday > 0 && totalToday < goalMin;
 }
 
-export function reminderCopy(kind: ReminderKind, toGoal = 0): { title: string; body: string } {
+/** First word of a display name, used in reminder titles. */
+export function reminderFirstName(displayName?: string | null): string | null {
+  const first = displayName?.trim().split(/\s+/)[0];
+  return first || null;
+}
+
+export function reminderCopy(kind: ReminderKind, toGoal = 0, displayName?: string | null): { title: string; body: string } {
+  const name = reminderFirstName(displayName);
   switch (kind) {
     case 'morning_9am':
       return {
-        title: 'New day, fresh start',
+        title: name ? `${name}, new day, fresh start` : 'New day, fresh start',
         body: toGoal > 0 ? `Today’s goal is ${toGoal}g. Log as you go.` : 'Log as you go today.',
       };
     case 'zero_log_2pm':
-      return { title: 'Nothing logged yet today.', body: 'Takes about 5 seconds to log.' };
+      return {
+        title: name ? `${name}, nothing logged yet today.` : 'Nothing logged yet today.',
+        body: 'Takes about 5 seconds to log.',
+      };
     case 'remaining_4pm':
     case 'remaining_7pm':
       return {
-        title: `${toGoal}g of protein left`,
+        title: name ? `${name}, ${toGoal}g of protein left` : `${toGoal}g of protein left`,
         body: 'That’s how much you still have to eat today.',
       };
     case 'zero_log_8pm':
       return {
-        title: 'Quick estimate for today?',
+        title: name ? `${name}, quick estimate for today?` : 'Quick estimate for today?',
         body: 'Skip the food-by-food. Set your protein total in one step.',
       };
     case 'progress':
       return toGoal <= 25
-        ? { title: 'Almost there', body: `${toGoal}g of protein left to hit your goal today.` }
-        : { title: `${toGoal}g to go`, body: `You're ${toGoal}g away from today's protein goal.` };
+        ? {
+            title: name ? `${name}, almost there` : 'Almost there',
+            body: `${toGoal}g of protein left to hit your goal today.`,
+          }
+        : {
+            title: name ? `${name}, ${toGoal}g to go` : `${toGoal}g to go`,
+            body: `You're ${toGoal}g away from today's protein goal.`,
+          };
   }
 }
 
@@ -123,8 +139,9 @@ export function planReminders(args: {
   goalMin: number;
   prefs: ReminderPreferences;
   days?: number;
+  name?: string | null;
 }): PlannedReminder[] {
-  const { now, totalToday, goalMin, prefs, days = 7 } = args;
+  const { now, totalToday, goalMin, prefs, days = 7, name } = args;
   if (!prefs.enabled) return [];
   const today = toLocalDate(now);
   const planned: PlannedReminder[] = [];
@@ -143,7 +160,7 @@ export function planReminders(args: {
         kind,
         date,
         fireAt,
-        ...reminderCopy(kind, toGoal),
+        ...reminderCopy(kind, toGoal, name),
         link: kind === 'zero_log_8pm' ? 'jota://log/set-total?src=notification' : 'jota://log?src=notification',
       });
     }
@@ -157,7 +174,7 @@ export function planReminders(args: {
         kind,
         date,
         fireAt,
-        ...reminderCopy(kind, toGoal),
+        ...reminderCopy(kind, toGoal, name),
         link: 'jota://log?src=notification',
       });
     }
@@ -171,7 +188,7 @@ export function planReminders(args: {
         kind: 'progress',
         date: today,
         fireAt,
-        ...reminderCopy('progress', gramsLeft(goalMin, totalToday)),
+        ...reminderCopy('progress', gramsLeft(goalMin, totalToday), name),
         link: 'jota://log?src=notification',
       });
     }

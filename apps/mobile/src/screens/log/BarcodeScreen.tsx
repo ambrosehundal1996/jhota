@@ -1,5 +1,5 @@
 import React, { useCallback, useRef, useState } from 'react';
-import { ActivityIndicator, Linking, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Linking, StatusBar, StyleSheet, View } from 'react-native';
 import { useIsFocused } from '@react-navigation/native';
 import {
   Camera,
@@ -88,6 +88,7 @@ export function BarcodeScreen({ navigation, route }: LogScreenProps<'Barcode'>) 
 
   return (
     <View style={styles.fill}>
+      <StatusBar barStyle="light-content" />
       <Camera style={StyleSheet.absoluteFill} device="back" isActive={focused && state.kind === 'scanning'} outputs={[output]} />
       <View style={styles.overlay} pointerEvents="box-none">
         <View style={styles.topBar}>

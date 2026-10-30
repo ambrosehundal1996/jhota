@@ -18,6 +18,7 @@ const theme: Theme = {
     card: colors.background,
     text: colors.text,
     border: colors.border,
+    notification: colors.accent,
   },
 };
 

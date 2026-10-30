@@ -135,4 +135,24 @@ describe('planReminders', () => {
   it('plans nothing when reminders are off', () => {
     expect(planReminders({ now: morning, totalToday: 0, goalMin: 125, prefs: { ...prefs, enabled: false } })).toEqual([]);
   });
+
+  it('puts the first name on every reminder title', () => {
+    const early = new Date(2026, 9, 9, 7, 0);
+    const plan = planReminders({ now: early, totalToday: 0, goalMin: 125, prefs, name: 'Ambrose Hundal' });
+    expect(plan.find(r => r.kind === 'morning_9am')?.title).toBe('Ambrose, new day, fresh start');
+    expect(plan.find(r => r.kind === 'zero_log_2pm')?.title).toBe('Ambrose, nothing logged yet today.');
+    expect(plan.find(r => r.kind === 'zero_log_8pm')?.title).toBe('Ambrose, quick estimate for today?');
+
+    const remaining = planReminders({ now: morning, totalToday: 80, goalMin: 125, prefs, name: 'Ambrose' });
+    expect(remaining.find(r => r.kind === 'remaining_4pm')?.title).toBe('Ambrose, 45g of protein left');
+
+    const progress = planReminders({
+      now: morning,
+      totalToday: 93,
+      goalMin: 125,
+      prefs: { ...only2pm, progressReminder: true },
+      name: 'Ambrose',
+    });
+    expect(progress.find(r => r.kind === 'progress')?.title).toBe('Ambrose, 32g to go');
+  });
 });

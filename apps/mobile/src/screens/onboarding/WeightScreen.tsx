@@ -41,7 +41,7 @@ export function WeightScreen({ navigation }: OnboardingScreenProps<'Weight'>) {
 
   return (
     <Screen keyboard footer={<Button label="Continue" disabled={!text} onPress={submit} />}>
-      <StepHeader step={2} total={3} onBack={navigation.goBack} />
+      <StepHeader step={3} total={4} onBack={navigation.goBack} />
       <AppText variant="title" accessibilityRole="header">
         What do you weigh?
       </AppText>

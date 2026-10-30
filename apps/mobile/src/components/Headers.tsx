@@ -5,7 +5,7 @@ import { AppText } from './AppText';
 import { Icon } from './Icon';
 import { IconButton } from './IconButton';
 
-/** Onboarding header: circular back button, segmented progress, "1 of 3". */
+/** Onboarding header: circular back button, segmented progress, "1 of 4". */
 export function StepHeader({ step, total, onBack }: { step: number; total: number; onBack?: () => void }) {
   return (
     <View style={styles.stepRow}>

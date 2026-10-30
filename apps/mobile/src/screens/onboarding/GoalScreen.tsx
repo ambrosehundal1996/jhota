@@ -11,7 +11,7 @@ export function GoalScreen({ navigation }: OnboardingScreenProps<'Goal'>) {
   const goalType = useAppStore(s => s.onboarding.goalType);
   return (
     <Screen footer={<Button label="Continue" disabled={!goalType} onPress={() => navigation.navigate('Weight')} />}>
-      <StepHeader step={1} total={3} onBack={navigation.goBack} />
+      <StepHeader step={2} total={4} onBack={navigation.goBack} />
       <AppText variant="title" accessibilityRole="header">
         What are you working toward?
       </AppText>

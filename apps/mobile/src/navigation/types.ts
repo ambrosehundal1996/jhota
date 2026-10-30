@@ -4,7 +4,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { LoggableFood } from '../types/models';
 
 /** Where a logging flow was launched from (analytics only). */
-export type LaunchSource = 'widget' | 'notification' | 'today' | 'history' | undefined;
+export type LaunchSource = 'widget' | 'notification' | 'today' | 'history' | 'onboarding' | undefined;
 
 interface LogContext {
   date?: LocalDate;
@@ -33,6 +33,7 @@ export type TabParamList = {
 
 export type OnboardingStackParamList = {
   Welcome: undefined;
+  Name: undefined;
   Goal: undefined;
   Weight: undefined;
   Range: undefined;
@@ -49,6 +50,8 @@ export type RootStackParamList = {
   BodyWeight: undefined;
   GoalTypeSettings: undefined;
   NotificationSettings: undefined;
+  DisplayName: undefined;
+  Feedback: undefined;
 };
 
 export type RootScreenProps<T extends keyof RootStackParamList> = NativeStackScreenProps<RootStackParamList, T>;

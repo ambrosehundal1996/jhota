@@ -57,7 +57,9 @@ export type AnalyticsEvent =
   | 'subscription_started'
   | 'subscription_cancelled'
   | 'purchases_restored'
-  | 'apple_account_linked';
+  | 'apple_account_linked'
+  | 'feedback_opened'
+  | 'feedback_sent';
 
 export type AnalyticsProps = Record<string, string | number | boolean | null | undefined>;
 

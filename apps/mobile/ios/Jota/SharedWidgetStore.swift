@@ -1,4 +1,3 @@
-import ActivityKit
 import Foundation
 import WidgetKit
 
@@ -22,35 +21,25 @@ class SharedWidgetStore: NSObject {
     }
     defaults.set(json, forKey: Self.snapshotKey)
     WidgetCenter.shared.reloadAllTimelines()
-    Self.syncLiveActivity(json: json)
+    WidgetLiveActivity.push(json: json)
     resolve(nil)
   }
 
-  private static func syncLiveActivity(json: String) {
-    guard ActivityAuthorizationInfo().areActivitiesEnabled else { return }
-    guard let data = json.data(using: .utf8),
-          let snapshot = try? JSONDecoder().decode(WidgetSnapshot.self, from: data)
-    else { return }
-    let resolved = snapshot.resolved(for: Date())
-    let state = ProteinActivityAttributes.ContentState(
-      total: resolved.total,
-      toGoal: resolved.toGoal,
-      reached: resolved.reached,
-      goalMin: resolved.goalMin,
-      goalMax: resolved.goalMax
-    )
-    let midnight = Calendar.current.startOfDay(for: Date().addingTimeInterval(86_400))
-    let content = ActivityContent(state: state, staleDate: midnight)
-    Task { @MainActor in
-      if let activity = Activity<ProteinActivityAttributes>.activities.first {
-        await activity.update(content)
-      } else {
-        _ = try? Activity.request(
-          attributes: ProteinActivityAttributes(),
-          content: content,
-          pushType: nil
-        )
+  @objc(takePendingQuickAdds:rejecter:)
+  func takePendingQuickAdds(
+    _ resolve: @escaping RCTPromiseResolveBlock,
+    rejecter reject: @escaping RCTPromiseRejectBlock
+  ) {
+    let pending = WidgetQuickAdd.takePending()
+    resolve(
+      pending.map { item in
+        [
+          "id": item.id,
+          "grams": item.grams,
+          "date": item.date,
+          "loggedAt": item.loggedAt,
+        ]
       }
-    }
+    )
   }
 }

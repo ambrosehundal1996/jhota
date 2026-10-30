@@ -4,10 +4,11 @@ import { analytics } from '../../analytics';
 import { AppText, Button, Screen, showToast } from '../../components';
 import { HeroRing, Wordmark } from '../../components/Brand';
 import type { OnboardingScreenProps } from '../../navigation/types';
+import { setOnboardingName } from '../../features/profile/actions';
 import { AppleSignInCancelled, continueWithApple, isAppleSignInAvailable } from '../../services/supabase/auth';
 import { syncNow } from '../../services/sync/syncEngine';
 import { getState } from '../../state/appStore';
-import { colors, spacing } from '../../theme';
+import { spacing } from '../../theme';
 
 export function WelcomeScreen({ navigation }: OnboardingScreenProps<'Welcome'>) {
   const [signingIn, setSigningIn] = useState(false);
@@ -19,11 +20,14 @@ export function WelcomeScreen({ navigation }: OnboardingScreenProps<'Welcome'>) 
   const signIn = async () => {
     setSigningIn(true);
     try {
-      await continueWithApple();
+      const result = await continueWithApple();
       await syncNow();
+      if (result.fullName && !getState().onboarding.displayName && !getState().profile?.display_name) {
+        setOnboardingName(result.fullName);
+      }
       if (!getState().profile?.onboarding_complete) {
         showToast('Signed in. Let’s set up your goal.');
-        navigation.navigate('Goal');
+        navigation.navigate('Name');
       }
     } catch (error) {
       if (!(error instanceof AppleSignInCancelled)) {
@@ -37,12 +41,13 @@ export function WelcomeScreen({ navigation }: OnboardingScreenProps<'Welcome'>) 
   return (
     <Screen
       scroll={false}
+      tone="hero"
       footer={
         <>
-          <Button label="Get started" onPress={() => navigation.navigate('Goal')} testID="get-started" />
+          <Button label="Get started" variant="onDark" onPress={() => navigation.navigate('Name')} testID="get-started" />
           {isAppleSignInAvailable() ? (
             <Pressable accessibilityRole="button" onPress={signIn} disabled={signingIn} style={styles.secondary}>
-              <AppText variant="bodyStrong" tone="secondary" align="center">
+              <AppText variant="bodyStrong" tone="onHeroMuted" align="center">
                 {signingIn ? 'Signing in…' : 'I already have an account'}
               </AppText>
             </Pressable>
@@ -51,16 +56,16 @@ export function WelcomeScreen({ navigation }: OnboardingScreenProps<'Welcome'>) 
       }
     >
       <View style={styles.header}>
-        <Wordmark />
+        <Wordmark inverted />
       </View>
       <View style={styles.ring} pointerEvents="none">
         <HeroRing size={420} />
       </View>
       <View style={styles.copy}>
-        <AppText variant="headline" accessibilityRole="header">
+        <AppText variant="headline" tone="onHero" accessibilityRole="header">
           Hit your protein goal. Every day.
         </AppText>
-        <AppText variant="body" tone="secondary" style={styles.sub}>
+        <AppText variant="body" tone="onHeroMuted" style={styles.sub}>
           Track what you eat, see what’s left, and build consistency without tracking your entire diet.
         </AppText>
       </View>
@@ -72,6 +77,6 @@ const styles = StyleSheet.create({
   header: { paddingTop: spacing.lg, zIndex: 1 },
   ring: { position: 'absolute', top: 10, right: -170 },
   copy: { flex: 1, justifyContent: 'flex-end', paddingBottom: spacing.xxl, gap: spacing.md },
-  sub: { maxWidth: 320, color: colors.textSecondary },
+  sub: { maxWidth: 320 },
   secondary: { paddingVertical: spacing.md },
 });

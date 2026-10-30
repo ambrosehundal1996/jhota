@@ -4,6 +4,7 @@ export * from './proteinRange';
 export * from './goalSettings';
 export * from './dailyTotal';
 export * from './goalStatus';
+export * from './rangeBar';
 export * from './celebration';
 export * from './dates';
 export * from './streaks';

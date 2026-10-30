@@ -30,6 +30,7 @@ export function startDataEffects(): () => void {
   const appSub = AppState.addEventListener('change', s => {
     if (s !== 'active') return;
     runEffects();
+    void updateWidget(true);
     void reportDeliveredReminders();
   });
   return () => {

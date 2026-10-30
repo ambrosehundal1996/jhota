@@ -40,7 +40,7 @@ export function Card({ tone = 'surface', padded = true, onPress, style, children
 
 const styles = StyleSheet.create({
   base: { backgroundColor: colors.surface, borderRadius: radii.lg },
-  mint: { backgroundColor: colors.accentTint, borderWidth: 1, borderColor: colors.accentTintStrong },
+  mint: { backgroundColor: colors.accentTint, borderWidth: 1, borderColor: colors.accentBorder },
   raised: { backgroundColor: colors.surfaceRaised, borderWidth: 1, borderColor: colors.border },
   padded: { padding: spacing.lg },
 });

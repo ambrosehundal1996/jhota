@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { computeDailyTotal, computeTotalsByDate, goalStatus, isGoalReached } from '..';
+import { computeDailyTotal, computeTotalsByDate, goalStatus, goalStatusHeadline, isGoalReached } from '..';
 
 const log = (protein_g: number, deleted = false, log_date = '2026-10-09') => ({
   protein_g,
@@ -67,6 +67,7 @@ describe('goal status', () => {
     expect(status.toGoal).toBe(0);
     expect(status.progress).toBe(1);
     expect(status.aboveMax).toBe(true);
+    expect(status.atLowerBound).toBe(false);
   });
 
   it('reports grams to goal against the minimum', () => {
@@ -80,5 +81,15 @@ describe('goal status', () => {
     expect(goalStatus(70, r).toGoal).toBe(55);
     expect(goalStatus(100, r).toGoal).toBe(25);
     expect(goalStatus(137, r).reached).toBe(true);
+  });
+
+  it('describes empty, below, at-min, within, and above without treating overage as failure', () => {
+    const r = { min: 112, max: 160 };
+    expect(goalStatusHeadline(goalStatus(0, r))).toBe('Let’s make some progress today.');
+    expect(goalStatusHeadline(goalStatus(85, r))).toBe('27g until you reach your goal.');
+    expect(goalStatusHeadline(goalStatus(112, r))).toBe('Goal reached! Nice work.');
+    expect(goalStatusHeadline(goalStatus(125, r))).toBe('You’re in your protein range!');
+    expect(goalStatusHeadline(goalStatus(160, r))).toBe('You’re in your protein range!');
+    expect(goalStatusHeadline(goalStatus(168, r))).toBe('Goal reached! Great consistency.');
   });
 });

@@ -21,6 +21,7 @@ import { zustandStorage } from './storage';
 export const LOCAL_USER_ID = 'local';
 
 export interface OnboardingDraft {
+  displayName: string | null;
   goalType: GoalType | null;
   weightValue: number | null;
   weightUnit: WeightUnit;
@@ -35,6 +36,8 @@ export interface AppFlags {
   halfwayDate: LocalDate | null;
   reportedReminderIds: string[];
   devBypassPaywall: boolean;
+  /** Open the log modal once after “Log your first protein” in onboarding. */
+  openLogAfterOnboarding: boolean;
 }
 
 export interface AppData {
@@ -75,7 +78,7 @@ export const initialAppData = (): AppData => ({
   isAnonymous: true,
   appleLinked: false,
   profile: null,
-  onboarding: { goalType: null, weightValue: null, weightUnit: 'lb' },
+  onboarding: { displayName: null, goalType: null, weightValue: null, weightUnit: 'lb' },
   logs: {},
   overrides: {},
   favorites: {},
@@ -94,13 +97,14 @@ export const initialAppData = (): AppData => ({
     halfwayDate: null,
     reportedReminderIds: [],
     devBypassPaywall: false,
+    openLogAfterOnboarding: false,
   },
 });
 
 export const useAppStore = create<AppData>()(
   persist(initialAppData, {
     name: 'jota-app',
-    version: 3,
+    version: 5,
     storage: createJSONStorage(() => zustandStorage),
     migrate: (persisted, version) => {
       const state = persisted as AppData;
@@ -109,6 +113,18 @@ export const useAppStore = create<AppData>()(
       }
       if (version < 3) {
         state.flags = { ...state.flags, halfwayDate: state.flags.halfwayDate ?? null };
+      }
+      if (version < 4) {
+        const prev = state.onboarding;
+        state.onboarding = {
+          displayName: prev?.displayName ?? null,
+          goalType: prev?.goalType ?? null,
+          weightValue: prev?.weightValue ?? null,
+          weightUnit: prev?.weightUnit ?? 'lb',
+        };
+      }
+      if (version < 5) {
+        state.flags = { ...state.flags, openLogAfterOnboarding: state.flags?.openLogAfterOnboarding ?? false };
       }
       return state;
     },

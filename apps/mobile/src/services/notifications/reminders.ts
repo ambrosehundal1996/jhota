@@ -18,7 +18,7 @@ const REMINDER_PREFIXES = [
 ];
 const isOurs = (id: string) => REMINDER_PREFIXES.some(p => id.startsWith(p));
 const isZeroLog = (id: string) => id.startsWith('zero_log') || id.startsWith('morning_');
-const needsFreshCopy = (id: string) => id.startsWith('progress-') || id.startsWith('remaining_') || id.startsWith('morning_');
+const needsFreshCopy = (id: string) => isOurs(id);
 
 export function toReminderPrefs(prefs: NotificationPreferences): ReminderPreferences {
   return {
@@ -71,6 +71,7 @@ async function runSync(): Promise<void> {
       totalToday: day.total.total,
       goalMin: day.range.min,
       prefs: toReminderPrefs(state.notificationPrefs),
+      name: state.profile.display_name,
     });
 
     const existing = (await notifee.getTriggerNotificationIds()).filter(isOurs);

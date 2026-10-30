@@ -4,7 +4,7 @@ import { colors, radii, shadows, spacing } from '../theme';
 import { AppText } from './AppText';
 import { Icon, type IconName } from './Icon';
 
-type Variant = 'primary' | 'filled' | 'secondary' | 'ghost' | 'destructive';
+type Variant = 'primary' | 'filled' | 'onDark' | 'secondary' | 'ghost' | 'destructive';
 
 interface Props {
   label: string;
@@ -19,7 +19,7 @@ interface Props {
   testID?: string;
 }
 
-/** Outlined green pill is the primary CTA style used across the mockups. */
+/** Solid forest-green CTA on cream; lime `onDark` for branded dark surfaces. */
 export function Button({
   label,
   onPress,
@@ -34,13 +34,15 @@ export function Button({
 }: Props) {
   const height = size === 'large' ? 56 : size === 'medium' ? 48 : 38;
   const textColor =
-    variant === 'filled'
-      ? colors.textOnAccent
-      : variant === 'secondary'
-        ? colors.text
-        : variant === 'destructive'
-          ? colors.destructive
-          : colors.accentText;
+    variant === 'onDark'
+      ? colors.textOnLime
+      : variant === 'primary' || variant === 'filled'
+        ? colors.textOnAccent
+        : variant === 'secondary'
+          ? colors.text
+          : variant === 'destructive'
+            ? colors.destructive
+            : colors.accentText;
   return (
     <Pressable
       testID={testID}
@@ -55,10 +57,13 @@ export function Button({
         { height, paddingHorizontal: size === 'small' ? spacing.md : spacing.xl },
         variant === 'primary' && [styles.primary, shadows.button],
         variant === 'filled' && styles.filled,
+        variant === 'onDark' && styles.onDark,
         variant === 'secondary' && styles.secondary,
         variant === 'destructive' && styles.secondary,
         pressed && styles.pressed,
         pressed && variant === 'filled' && { backgroundColor: colors.accentPressed },
+        pressed && variant === 'primary' && { backgroundColor: colors.accentPressed },
+        pressed && variant === 'onDark' && { backgroundColor: colors.limePressed },
         disabled && styles.disabled,
         style,
       ]}
@@ -84,17 +89,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  primary: {
-    backgroundColor: colors.surfaceRaised,
-    borderWidth: 1.5,
-    borderColor: colors.accent,
-  },
+  primary: { backgroundColor: colors.accent },
   filled: { backgroundColor: colors.accent },
+  onDark: { backgroundColor: colors.lime },
   secondary: {
     backgroundColor: colors.surfaceRaised,
     borderWidth: 1,
     borderColor: colors.border,
   },
-  pressed: { opacity: 0.85, transform: [{ scale: 0.99 }] },
+  pressed: { opacity: 0.92, transform: [{ scale: 0.99 }] },
   disabled: { opacity: 0.4 },
 });

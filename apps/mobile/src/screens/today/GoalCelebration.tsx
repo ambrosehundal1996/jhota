@@ -1,6 +1,6 @@
 import { computeGoalStreak, weeklySummary } from '@jota/domain';
 import React, { useEffect, useMemo } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, StatusBar, StyleSheet, View } from 'react-native';
 import Animated, { FadeIn, FadeOut, ZoomIn } from 'react-native-reanimated';
 import { AppText, ProgressRing } from '../../components';
 import { useReduceMotion } from '../../hooks/useReduceMotion';
@@ -57,6 +57,7 @@ function GoalCelebration() {
 
   return (
     <View pointerEvents="box-none" style={[StyleSheet.absoluteFill, styles.host]}>
+      <StatusBar barStyle="light-content" />
       <Pressable
         accessibilityRole="button"
         accessibilityLabel="Goal hit. Dismiss."
@@ -86,19 +87,27 @@ function GoalCelebration() {
                   />
                 ))
               : null}
-            <ProgressRing progress={1} size={168} strokeWidth={14} pulseKey="goal" accessibilityLabel="Goal hit">
-              <AppText variant="h2" tone="accent">
+            <ProgressRing
+              progress={1}
+              size={168}
+              strokeWidth={14}
+              color={colors.lime}
+              trackColor={colors.heroTrack}
+              pulseKey="goal"
+              accessibilityLabel="Goal hit"
+            >
+              <AppText variant="h2" tone="lime">
                 {total}g
               </AppText>
             </ProgressRing>
           </View>
         </Animated.View>
         <Animated.View entering={reduceMotion ? undefined : FadeIn.delay(120).duration(220)} style={styles.copy}>
-          <AppText variant="title" align="center" accessibilityRole="header">
+          <AppText variant="title" tone="onHero" align="center" accessibilityRole="header">
             Goal hit. {total}g today.
           </AppText>
           {quietLine ? (
-            <AppText variant="body" tone="secondary" align="center">
+            <AppText variant="body" tone="onHeroMuted" align="center">
               {quietLine}
             </AppText>
           ) : null}
@@ -113,7 +122,7 @@ const styles = StyleSheet.create({
   host: { zIndex: 30 },
   scrim: {
     ...StyleSheet.absoluteFill,
-    backgroundColor: colors.scrim,
+    backgroundColor: colors.heroScrim,
   },
   center: {
     ...StyleSheet.absoluteFill,
@@ -129,7 +138,7 @@ const styles = StyleSheet.create({
     top: '50%',
     marginLeft: -3,
     marginTop: -3,
-    backgroundColor: colors.accent,
+    backgroundColor: colors.lime,
     opacity: 0.55,
   },
 });

@@ -12,23 +12,28 @@ export function ReadyScreen({ navigation }: OnboardingScreenProps<'Ready'>) {
     if (!range) navigation.goBack();
   }, [range, navigation]);
   if (!range) return null;
+
+  const finish = (openLog: boolean) => completeOnboarding(range, isCustom, { openLog });
+
   return (
-    <Screen scroll={false} footer={<Button label="Start Tracking" onPress={() => completeOnboarding(range, isCustom)} testID="start-tracking" />}>
+    <Screen
+      scroll={false}
+      footer={
+        <>
+          <Button label="Log your first protein" variant="filled" onPress={() => finish(true)} testID="log-first-protein" />
+          <Button label="I’ll log later" variant="ghost" onPress={() => finish(false)} testID="log-later" />
+        </>
+      }
+    >
       <View style={styles.center}>
         <ProgressRing progress={1} size={160} strokeWidth={12}>
           <Icon name="check" size={48} color={colors.accent} strokeWidth={2.4} />
         </ProgressRing>
         <AppText variant="title" align="center" accessibilityRole="header" style={styles.title}>
-          You’re ready.
+          You’re all set!
         </AppText>
-        <AppText variant="hero" align="center">
-          {range.min}–{range.max}g
-        </AppText>
-        <AppText variant="body" tone="secondary" align="center">
-          protein per day
-        </AppText>
-        <AppText variant="caption" tone="tertiary" align="center" style={styles.note}>
-          Your goal counts as reached at {range.min}g. Going over {range.max}g is fine too.
+        <AppText variant="body" tone="secondary" align="center" style={styles.sub}>
+          Your daily protein range is {range.min}–{range.max}g. Let’s start making progress.
         </AppText>
       </View>
     </Screen>
@@ -38,5 +43,5 @@ export function ReadyScreen({ navigation }: OnboardingScreenProps<'Ready'>) {
 const styles = StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: spacing.xs },
   title: { marginTop: spacing.xxl, marginBottom: spacing.md },
-  note: { marginTop: spacing.lg, maxWidth: 280 },
+  sub: { maxWidth: 300 },
 });

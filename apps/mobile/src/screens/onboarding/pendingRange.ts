@@ -7,7 +7,7 @@ interface PendingRange {
   set: (value: { range: ProteinRange; isCustom: boolean }) => void;
 }
 
-/** The range chosen on the Range step, committed when the user taps "Start Tracking". */
+/** The range chosen on the Range step, committed when onboarding finishes. */
 export const usePendingRange = create<PendingRange>(set => ({
   range: null,
   isCustom: false,

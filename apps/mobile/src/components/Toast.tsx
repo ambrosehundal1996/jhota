@@ -43,7 +43,7 @@ export function ToastHost() {
   return (
     <View pointerEvents="box-none" style={[StyleSheet.absoluteFill, styles.host, { paddingBottom: insets.bottom + 72 }]}>
       <Animated.View key={id} entering={FadeInDown.duration(180)} exiting={FadeOutDown.duration(160)} style={styles.toast}>
-        {error ? null : <Icon name="check" size={18} color={colors.accentTintStrong} strokeWidth={2.4} />}
+        {error ? null : <Icon name="check" size={18} color={colors.lime} strokeWidth={2.4} />}
         <AppText variant="bodyStrong" tone="onAccent" style={styles.message} numberOfLines={2}>
           {message}
         </AppText>
@@ -57,7 +57,7 @@ export function ToastHost() {
             }}
             hitSlop={12}
           >
-            <AppText variant="bodyStrong" style={{ color: colors.accentTintStrong }}>
+            <AppText variant="bodyStrong" style={{ color: colors.lime }}>
               {actionLabel}
             </AppText>
           </Pressable>

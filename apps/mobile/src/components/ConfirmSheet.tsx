@@ -8,7 +8,7 @@ import { Button } from './Button';
 export interface SheetAction {
   label: string;
   onPress: () => void;
-  variant?: 'primary' | 'filled' | 'secondary' | 'ghost' | 'destructive';
+  variant?: 'primary' | 'filled' | 'onDark' | 'secondary' | 'ghost' | 'destructive';
 }
 
 interface Props {
