@@ -115,10 +115,10 @@ struct WidgetSnapshot: Codable {
     UserDefaults(suiteName: Self.appGroup)?.set(json, forKey: Self.key)
   }
 
-  /// No-op inside the widget extension; Live Activities belong to the app process.
-  func pushLiveActivity() {
+  /// Drops any leftover Lock Screen Live Activity. No-op in the widget extension.
+  func dismissLiveActivity() {
     guard Bundle.main.bundleIdentifier?.hasSuffix(".widget") != true else { return }
-    WidgetLiveActivity.push(self)
+    WidgetLiveActivity.endAll()
   }
 }
 
@@ -192,43 +192,13 @@ enum WidgetProgressState: Equatable {
 }
 
 enum WidgetLiveActivity {
-  static func push(_ snapshot: WidgetSnapshot) {
-    guard ActivityAuthorizationInfo().areActivitiesEnabled else { return }
-    let resolved = snapshot.resolved(for: Date())
-    let state = ProteinActivityAttributes.ContentState(
-      total: resolved.total,
-      toGoal: resolved.toGoal,
-      firstName: resolved.firstName,
-      reached: resolved.reached,
-      goalMin: resolved.goalMin,
-      goalMax: resolved.goalMax,
-      draftGrams: nil
-    )
-    let stale = Calendar.current.date(byAdding: .hour, value: 36, to: Calendar.current.startOfDay(for: Date()))
-    let content = ActivityContent(state: state, staleDate: stale)
+  static func endAll() {
+    let activities = Activity<ProteinActivityAttributes>.activities
+    guard !activities.isEmpty else { return }
     Task { @MainActor in
-      do {
-        if let activity = Activity<ProteinActivityAttributes>.activities.first {
-          await activity.update(content)
-        } else {
-          _ = try Activity.request(
-            attributes: ProteinActivityAttributes(),
-            content: content,
-            pushType: nil
-          )
-        }
-      } catch {
-        #if DEBUG
-        print("[widget] live activity failed:", error)
-        #endif
+      for activity in activities {
+        await activity.end(nil, dismissalPolicy: .immediate)
       }
     }
-  }
-
-  static func push(json: String) {
-    guard let data = json.data(using: .utf8),
-          let snapshot = try? JSONDecoder().decode(WidgetSnapshot.self, from: data)
-    else { return }
-    push(snapshot)
   }
 }

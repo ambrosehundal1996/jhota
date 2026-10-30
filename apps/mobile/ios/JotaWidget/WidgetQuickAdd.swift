@@ -1,4 +1,3 @@
-import ActivityKit
 import AppIntents
 import Foundation
 import WidgetKit
@@ -51,7 +50,7 @@ enum WidgetQuickAdd {
     if var snapshot = WidgetSnapshot.load()?.resolved(for: now) {
       snapshot = snapshot.applyingQuickAdd(amount, now: now)
       snapshot.save()
-      snapshot.pushLiveActivity()
+      snapshot.dismissLiveActivity()
     }
     WidgetCenter.shared.reloadAllTimelines()
     return amount
@@ -92,18 +91,3 @@ struct LogQuickAddIntent: AppIntent {
   }
 }
 
-struct LogQuickAddLiveIntent: LiveActivityIntent {
-  static var title: LocalizedStringResource = "Log protein"
-  static var openAppWhenRun = false
-
-  @Parameter(title: "Grams")
-  var grams: Int
-
-  init() { grams = WidgetQuickAdd.presets[0] }
-  init(grams: Int) { self.grams = grams }
-
-  func perform() async throws -> some IntentResult {
-    WidgetQuickAdd.logGrams(grams)
-    return .result()
-  }
-}
