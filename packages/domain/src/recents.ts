@@ -16,6 +16,7 @@ export interface RecentFood {
   lastMeal: MealType | null;
   lastLoggedAt: string;
   timesLogged: number;
+  notes: string | null;
 }
 
 export function recentFoodKey(
@@ -62,6 +63,7 @@ export function deriveRecentFoods(logs: readonly FoodLog[], limit = 20): RecentF
       lastMeal: log.meal_type,
       lastLoggedAt: log.logged_at,
       timesLogged: 1,
+      notes: log.notes ?? null,
     });
   }
   return [...byKey.values()].slice(0, limit);

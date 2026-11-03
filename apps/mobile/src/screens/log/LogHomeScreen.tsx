@@ -88,7 +88,7 @@ export function LogHomeScreen({ navigation, route }: LogScreenProps<'LogHome'>) 
       </Pressable>
 
       <View style={styles.tiles}>
-        <MethodTile label="AI photo" icon="camera" onPress={() => startMethod('ai_photo')} testID="method-photo" />
+        <MethodTile label="Log a Meal" icon="camera" onPress={() => startMethod('ai_photo')} testID="method-photo" />
         <MethodTile label="Quick add" icon="bolt" onPress={() => startMethod('quick_add')} />
         <MethodTile label="Set total" icon="sigma" onPress={() => startMethod('set_total')} />
         <MethodTile label="Scan" icon="barcode" onPress={() => startMethod('barcode')} />

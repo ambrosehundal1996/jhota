@@ -15,6 +15,7 @@ export * from './ListRow';
 export * from './OfflineBanner';
 export * from './ProgressBar';
 export * from './ProgressRing';
+export * from './RangeIntervalBar';
 export * from './Screen';
 export * from './SegmentedControl';
 export * from './SelectCard';

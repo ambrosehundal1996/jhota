@@ -28,7 +28,8 @@ function persistLog(log: FoodLog): void {
   const previous = getState().logs[log.id];
   try {
     setState(state => ({ logs: { ...state.logs, [log.id]: log } }));
-    enqueueUpsert('food_logs', log.id, { ...log });
+    const { photo_uri: _localPhoto, photo_storage_path: _storagePath, ...row } = log;
+    enqueueUpsert('food_logs', log.id, { ...row, photo_storage_path: log.photo_storage_path ?? null });
   } catch (error) {
     setState(state => {
       const logs = { ...state.logs };
@@ -47,6 +48,9 @@ export interface NewLogInput {
   date: LocalDate;
   source: LogSource;
   ai?: { analysisId: string | null; originalProteinG: number | null; wasEdited: boolean };
+  photoUri?: string | null;
+  photoStoragePath?: string | null;
+  notes?: string | null;
 }
 
 export function buildLog(input: NewLogInput, userId: string, now = nowIso()): FoodLog {
@@ -73,6 +77,9 @@ export function buildLog(input: NewLogInput, userId: string, now = nowIso()): Fo
     ai_analysis_id: input.ai?.analysisId ?? null,
     ai_original_protein_g: input.ai?.originalProteinG ?? null,
     ai_was_edited: input.ai ? input.ai.wasEdited : null,
+    photo_storage_path: input.photoStoragePath ?? null,
+    photo_uri: input.photoUri ?? null,
+    notes: input.notes?.trim() || null,
     created_at: now,
     updated_at: now,
     deleted_at: null,
@@ -233,7 +240,7 @@ export function recentToLoggable(recent: RecentFood): LoggableFood {
 
 /** One-tap re-log with the most recently used serving. */
 export function relogRecent(recent: RecentFood, date: LocalDate): FoodLog | undefined {
-  const log = addFoodLog({ food: recentToLoggable(recent), date, source: 'recent' });
+  const log = addFoodLog({ food: recentToLoggable(recent), date, source: 'recent', notes: recent.notes });
   if (log) analytics.track('recent_food_logged', { protein_g: log.protein_g });
   return log;
 }

@@ -131,7 +131,18 @@ async function pullChanges(userId: string): Promise<void> {
         }
       }
       for (const row of data as { id: string }[]) {
-        if (!pending.has(row.id)) current[row.id] = row;
+        if (pending.has(row.id)) continue;
+        if (table === 'food_logs') {
+          const local = current[row.id] as { photo_uri?: string | null; photo_storage_path?: string | null } | undefined;
+          const remote = row as { photo_storage_path?: string | null };
+          current[row.id] = {
+            ...row,
+            photo_uri: local?.photo_uri ?? null,
+            photo_storage_path: remote.photo_storage_path ?? local?.photo_storage_path ?? null,
+          } as { id: string };
+        } else {
+          current[row.id] = row;
+        }
       }
       const last = (data[data.length - 1] as { updated_at: string }).updated_at;
       return { [key]: current, lastPulledAt: { ...state.lastPulledAt, [table]: last } } as Partial<AppData>;

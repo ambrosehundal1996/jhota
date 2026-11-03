@@ -44,7 +44,7 @@ export function DailyProteinProgress({
   const maxLeft = layout.maxEnd * trackW;
   const zoneW = Math.max(4, maxLeft - minLeft);
   const fillColor = colors.lime;
-  const label = `${Math.round(total)} grams consumed today. Daily goal ${Math.round(range.min)} to ${Math.round(range.max)} grams. ${headline}`;
+  const label = `${Math.round(total)} grams consumed today. Daily range ${Math.round(range.min)} to ${Math.round(range.max)} grams. ${headline}`;
 
   return (
     <View
@@ -66,7 +66,7 @@ export function DailyProteinProgress({
           {source === 'override' ? 'Total set today' : 'Protein consumed today'}
         </AppText>
         <AppText variant="body" tone="onHeroMuted" style={styles.goal}>
-          Your daily goal: {Math.round(range.min)}–{Math.round(range.max)}g
+          Your daily range: {Math.round(range.min)}–{Math.round(range.max)}g
         </AppText>
       </View>
 

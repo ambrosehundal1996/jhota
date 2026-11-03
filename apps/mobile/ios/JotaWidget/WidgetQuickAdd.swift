@@ -1,3 +1,4 @@
+import ActivityKit
 import AppIntents
 import Foundation
 import WidgetKit
@@ -50,7 +51,7 @@ enum WidgetQuickAdd {
     if var snapshot = WidgetSnapshot.load()?.resolved(for: now) {
       snapshot = snapshot.applyingQuickAdd(amount, now: now)
       snapshot.save()
-      snapshot.dismissLiveActivity()
+      snapshot.pushLiveActivity()
     }
     WidgetCenter.shared.reloadAllTimelines()
     return amount
@@ -77,6 +78,22 @@ struct LogQuickAddIntent: AppIntent {
   static var title: LocalizedStringResource = "Log protein"
   static var description = IntentDescription("Add protein grams from the widget.")
   static var isDiscoverable = false
+  static var openAppWhenRun = false
+
+  @Parameter(title: "Grams")
+  var grams: Int
+
+  init() { grams = WidgetQuickAdd.presets[0] }
+  init(grams: Int) { self.grams = grams }
+
+  func perform() async throws -> some IntentResult {
+    WidgetQuickAdd.logGrams(grams)
+    return .result()
+  }
+}
+
+struct LogQuickAddLiveIntent: LiveActivityIntent {
+  static var title: LocalizedStringResource = "Log protein"
   static var openAppWhenRun = false
 
   @Parameter(title: "Grams")

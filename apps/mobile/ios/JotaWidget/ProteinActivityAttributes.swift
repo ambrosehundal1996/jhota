@@ -3,6 +3,7 @@ import Foundation
 
 struct ProteinActivityAttributes: ActivityAttributes {
   struct ContentState: Codable, Hashable {
+    var date: String? = nil
     var total: Int
     var toGoal: Int
     var firstName: String?

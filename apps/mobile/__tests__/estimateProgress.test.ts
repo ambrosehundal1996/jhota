@@ -1,16 +1,28 @@
-import { estimateBarProgress, estimateStep } from '../src/screens/log/photoEstimateProgress';
+import { analysisCopy } from '../src/screens/log/analysisCopy';
 
-test('upload stays on the first checkpoint', () => {
-  expect(estimateStep('uploading', 0)).toBe(0);
-  expect(estimateStep('uploading', 3)).toBe(0);
-  expect(estimateBarProgress('uploading', 0)).toBeLessThan(0.2);
+test('analysis copy starts on one honest analyzing state', () => {
+  expect(analysisCopy(0)).toEqual({
+    headline: 'Finding your protein.',
+    supporting: 'Analyzing your meal',
+    showCancel: false,
+  });
 });
 
-test('analysis checkpoints move forward with time and the bar never completes early', () => {
-  expect(estimateStep('analyzing', 0)).toBe(1);
-  expect(estimateStep('analyzing', 4)).toBe(2);
-  expect(estimateStep('analyzing', 7)).toBe(3);
-  expect(estimateStep('analyzing', 11)).toBe(4);
-  expect(estimateBarProgress('analyzing', 3)).toBeGreaterThan(0.2);
-  expect(estimateBarProgress('analyzing', 20)).toBeLessThan(0.95);
+test('after 8 seconds it reassures without claiming progress', () => {
+  expect(analysisCopy(8)).toEqual({
+    headline: 'Finding your protein.',
+    supporting: 'Still working on your meal.',
+    showCancel: false,
+  });
+  expect(analysisCopy(19).headline).toBe('Finding your protein.');
+  expect(analysisCopy(19).showCancel).toBe(false);
+});
+
+test('after 20 seconds it offers an escape without saying the estimate is almost done', () => {
+  expect(analysisCopy(20)).toEqual({
+    headline: 'Taking a little longer than usual.',
+    supporting: 'Your meal is still being analyzed.',
+    showCancel: true,
+  });
+  expect(analysisCopy(40).headline).not.toMatch(/almost|finaliz/i);
 });

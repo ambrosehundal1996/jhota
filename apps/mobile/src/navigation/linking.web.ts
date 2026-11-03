@@ -13,6 +13,7 @@ export const linking: LinkingOptions<RootStackParamList> = {
         screens: {
           Today: '',
           Progress: 'progress',
+          Feedback: 'feedback',
           Profile: 'profile',
         },
       },
@@ -27,6 +28,7 @@ export const linking: LinkingOptions<RootStackParamList> = {
         },
       },
       Day: 'day/:date',
+      WidgetPreview: 'widget-preview',
     },
   },
 };

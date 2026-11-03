@@ -28,6 +28,7 @@ export type LogStackParamList = {
 export type TabParamList = {
   Today: undefined;
   Progress: undefined;
+  Feedback: undefined;
   Profile: undefined;
 };
 
@@ -51,7 +52,7 @@ export type RootStackParamList = {
   GoalTypeSettings: undefined;
   NotificationSettings: undefined;
   DisplayName: undefined;
-  Feedback: undefined;
+  WidgetPreview: undefined;
 };
 
 export type RootScreenProps<T extends keyof RootStackParamList> = NativeStackScreenProps<RootStackParamList, T>;

@@ -1,7 +1,9 @@
 import type { AiConfidence, UncertaintyReason } from '@jota/domain';
 import React, { useEffect, useRef, useState } from 'react';
 import { Image, Pressable, StyleSheet, TextInput, View } from 'react-native';
+import Animated, { FadeIn } from 'react-native-reanimated';
 import { AppText, Button, Card, ConfirmSheet, Icon, IconButton, Screen, SheetHeader, showToast } from '../../components';
+import { useReduceMotion } from '../../hooks/useReduceMotion';
 import {
   addDraftItem,
   confirmDraft,
@@ -21,6 +23,7 @@ import { useAppStore } from '../../state/appStore';
 import type { AiDraftItem } from '../../types/models';
 import { colors, radii, spacing, typography } from '../../theme';
 import { formatShortDay, trimNumber } from '../../utils/format';
+import { MealAnalysisResultReveal } from './MealAnalysisResultReveal';
 import { closeLog } from './useLogContext';
 
 const LEVEL_LABEL: Record<AiConfidence, string> = { high: 'High', medium: 'Medium', low: 'Low' };
@@ -98,6 +101,7 @@ export function PhotoReviewScreen({ navigation }: LogScreenProps<'PhotoReview'>)
   const [confirmDiscard, setConfirmDiscard] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const leaving = useRef(false);
+  const reduceMotion = useReduceMotion();
 
   const items = draft?.items ?? [];
   const total = draftTotal(items);
@@ -157,33 +161,49 @@ export function PhotoReviewScreen({ navigation }: LogScreenProps<'PhotoReview'>)
     >
       <SheetHeader title="Review estimate" onClose={() => setConfirmDiscard(true)} />
 
-      <View style={styles.top}>
-        {draft.photoUri ? <Image source={{ uri: draft.photoUri }} style={styles.thumb} accessibilityIgnoresInvertColors /> : null}
-        <View style={styles.flex}>
-          <AppText variant="eyebrow" tone="accent">
-            Estimated protein
+      {draft.photoUri ? (
+        <Animated.View entering={reduceMotion ? undefined : FadeIn.duration(280)} style={styles.photoCard}>
+          <Image
+            source={{ uri: draft.photoUri }}
+            style={styles.photo}
+            resizeMode="contain"
+            accessibilityLabel="Your meal photo"
+            accessibilityIgnoresInvertColors
+          />
+        </Animated.View>
+      ) : null}
+
+      <MealAnalysisResultReveal totalG={total} style={styles.hero}>
+        <AppText variant="eyebrow" tone="accent">
+          Your protein estimate is ready.
+        </AppText>
+        <View style={styles.totalRow}>
+          <AppText variant="hero" tone="secondary">
+            ~
           </AppText>
-          <View style={styles.totalRow}>
-            <TextInput
-              value={totalText}
-              onFocus={() => setEditingTotal(true)}
-              onChangeText={t => setTotalText(t.replace(/[^0-9.]/g, ''))}
-              onEndEditing={() => {
-                setEditingTotal(false);
-                const next = parse(totalText);
-                if (Math.round(next * 10) !== Math.round(total * 10)) rescaleDraftTotal(next);
-              }}
-              keyboardType="decimal-pad"
-              style={styles.total}
-              selectTextOnFocus
-              accessibilityLabel="Estimated total protein in grams. Editing rescales the items."
-              testID="estimate-total"
-            />
-            <AppText variant="h2" tone="secondary">
-              g
-            </AppText>
-            <Icon name="edit" size={16} color={colors.textTertiary} />
-          </View>
+          <TextInput
+            value={totalText}
+            onFocus={() => setEditingTotal(true)}
+            onChangeText={t => setTotalText(t.replace(/[^0-9.]/g, ''))}
+            onEndEditing={() => {
+              setEditingTotal(false);
+              const next = parse(totalText);
+              if (Math.round(next * 10) !== Math.round(total * 10)) rescaleDraftTotal(next);
+            }}
+            keyboardType="decimal-pad"
+            style={styles.total}
+            selectTextOnFocus
+            accessibilityLabel="Estimated total protein in grams. Editing rescales the items."
+            testID="estimate-total"
+          />
+          <AppText variant="h2" tone="secondary">
+            g
+          </AppText>
+          <Icon name="edit" size={16} color={colors.textTertiary} />
+        </View>
+        <AppText variant="caption" tone="secondary">
+          Estimated from your meal
+        </AppText>
           {confidence ? (
             <Pressable
               accessibilityRole="button"
@@ -200,8 +220,7 @@ export function PhotoReviewScreen({ navigation }: LogScreenProps<'PhotoReview'>)
               <Icon name="info" size={14} color={colors.textTertiary} />
             </Pressable>
           ) : null}
-        </View>
-      </View>
+      </MealAnalysisResultReveal>
 
       {detailsOpen && confidence ? (
         <Card style={styles.details} testID="confidence-details">
@@ -269,9 +288,16 @@ export function PhotoReviewScreen({ navigation }: LogScreenProps<'PhotoReview'>)
 }
 
 const styles = StyleSheet.create({
-  flex: { flex: 1 },
-  top: { flexDirection: 'row', alignItems: 'center', gap: spacing.lg, marginTop: spacing.sm },
-  thumb: { width: 84, height: 84, borderRadius: radii.md, backgroundColor: colors.surface },
+  photoCard: {
+    marginTop: spacing.sm,
+    borderRadius: radii.xl,
+    overflow: 'hidden',
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  photo: { width: '100%', aspectRatio: 4 / 3 },
+  hero: { marginTop: spacing.xl, gap: spacing.xs },
   totalRow: { flexDirection: 'row', alignItems: 'baseline', gap: spacing.xs },
   total: { ...typography.hero, color: colors.text, minWidth: 60, padding: 0 },
   disclaimer: { marginTop: spacing.md },

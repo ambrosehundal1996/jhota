@@ -1,9 +1,12 @@
 import { analytics } from '../src/analytics';
 import type { AiEstimate } from '@jota/domain';
+import { ApiError } from '../src/services/api/client';
 import {
   acceptRoughEstimate,
   addDraftItem,
+  ANALYSIS_TIMEOUT,
   confirmDraft,
+  discardDraft,
   draftTotal,
   hasNewContext,
   isDraftEdited,
@@ -12,6 +15,7 @@ import {
   rescaleDraftTotal,
   runAnalysis,
   setDraftContext,
+  stopAnalysisKeepPhoto,
   updateDraftItem,
 } from '../src/features/ai/draft';
 import { analyzeMealPhoto } from '../src/services/ai/photoAnalysis';
@@ -100,12 +104,17 @@ test('editing the total rescales items and keeps the exact sum', () => {
   expect(items[0]!.protein_g).toBeCloseTo(52.5, 1);
 });
 
-test('confirming an unedited estimate logs one ai_photo entry per item', () => {
+test('confirming an unedited estimate logs one meal with ingredients in notes', () => {
   const logs = confirmDraft();
-  expect(logs.map(l => [l.food_name, l.protein_g, l.source, l.ai_was_edited])).toEqual([
-    ['Grilled chicken', 42, 'ai_photo', false],
-    ['Rice', 6, 'ai_photo', false],
-  ]);
+  expect(logs).toHaveLength(1);
+  expect(logs[0]).toMatchObject({
+    food_name: 'Meal',
+    protein_g: 48,
+    source: 'ai_photo',
+    ai_was_edited: false,
+    ai_original_protein_g: 48,
+  });
+  expect(logs[0]!.notes).toBe('Grilled chicken · 6 oz · 42g\nRice · 1 cup · 6g');
   expect(getState().aiDraft).toBeNull();
   const update = getState().outbox.find(i => i.table === 'ai_photo_analyses');
   expect(update).toMatchObject({ op: 'update', rowId: 'a1', patch: { status: 'confirmed', final_total_g: 48, was_edited: false } });
@@ -144,7 +153,9 @@ describe('confidence after user edits', () => {
   test('confirming keeps the user’s value and records which items they adjusted', () => {
     updateDraftItem('k1', { protein_g: 50 });
     const logs = confirmDraft();
-    expect(logs[0]).toMatchObject({ protein_g: 50, ai_original_protein_g: 42, ai_was_edited: true });
+    expect(logs).toHaveLength(1);
+    expect(logs[0]).toMatchObject({ protein_g: 56, ai_original_protein_g: 48, ai_was_edited: true });
+    expect(logs[0]!.notes).toContain('Grilled chicken · 6 oz · 50g');
     const update = getState().outbox.find(i => i.table === 'ai_photo_analyses');
     expect(update).toMatchObject({
       patch: {
@@ -207,7 +218,7 @@ describe('analysis results', () => {
       'a3',
     );
     await runAnalysis();
-    expect(analyzeMock).toHaveBeenLastCalledWith('u/2026-10-09/p.jpg', 'It’s paneer, about 150g');
+    expect(analyzeMock).toHaveBeenLastCalledWith('u/2026-10-09/p.jpg', 'It’s paneer, about 150g', expect.any(AbortSignal));
     expect(getState().aiDraft).toMatchObject({ status: 'ready', analysisId: 'a3', overallConfidence: 'high' });
     expect(getState().outbox.find(i => i.table === 'ai_photo_analyses')).toMatchObject({ rowId: 'a2', patch: { status: 'discarded' } });
     expect(analytics.track).toHaveBeenCalledWith('ai_clarification_completed', { outcome: 'reanalyzed', overall_confidence: 'high' });
@@ -225,5 +236,61 @@ describe('analysis results', () => {
     acceptRoughEstimate();
     expect(getState().aiDraft?.status).toBe('ready');
     expect(analytics.track).toHaveBeenCalledWith('ai_clarification_completed', { outcome: 'kept_estimate', overall_confidence: 'high' });
+  });
+
+  test('a known timeout is a failure, not a still-running analysis', async () => {
+    analyzeMock.mockRejectedValueOnce(new ApiError(0, 'timeout', 'This is taking longer than usual. Please try again.'));
+    await runAnalysis();
+    expect(getState().aiDraft).toMatchObject({ status: 'failed', error: ANALYSIS_TIMEOUT, photoUri: 'file:///tmp/photo.jpg' });
+  });
+
+  test('cancelling keeps the photo and ignores a late result', async () => {
+    let resolveAnalyze: (value: Awaited<ReturnType<typeof analyzeMealPhoto>>) => void = () => {};
+    analyzeMock.mockImplementationOnce(() => new Promise(resolve => { resolveAnalyze = resolve; }));
+    const pending = runAnalysis();
+    await Promise.resolve();
+    stopAnalysisKeepPhoto();
+    expect(getState().aiDraft).toMatchObject({ status: 'picked', photoUri: 'file:///tmp/photo.jpg' });
+    resolveAnalyze({
+      analysisId: 'late',
+      model: 'test',
+      estimate: {
+        is_food: true,
+        items: [{ name: 'Chicken', portion_description: '1', estimated_weight_g: 100, protein_g: 30, confidence: 'high', uncertainty_reasons: [] }],
+        total_protein_g: 30,
+        overall_confidence: 'high',
+        review_notes: [],
+        needs_clarification: false,
+        clarification_question: null,
+      },
+    });
+    await pending;
+    expect(getState().aiDraft).toMatchObject({ status: 'picked', photoUri: 'file:///tmp/photo.jpg' });
+    expect(getState().logs).toEqual({});
+  });
+
+  test('discarding while analysis is in flight never logs the late result', async () => {
+    let resolveAnalyze: (value: Awaited<ReturnType<typeof analyzeMealPhoto>>) => void = () => {};
+    analyzeMock.mockImplementationOnce(() => new Promise(resolve => { resolveAnalyze = resolve; }));
+    const pending = runAnalysis();
+    await Promise.resolve();
+    discardDraft();
+    expect(getState().aiDraft).toBeNull();
+    resolveAnalyze({
+      analysisId: 'late',
+      model: 'test',
+      estimate: {
+        is_food: true,
+        items: [{ name: 'Chicken', portion_description: '1', estimated_weight_g: 100, protein_g: 30, confidence: 'high', uncertainty_reasons: [] }],
+        total_protein_g: 30,
+        overall_confidence: 'high',
+        review_notes: [],
+        needs_clarification: false,
+        clarification_question: null,
+      },
+    });
+    await pending;
+    expect(getState().aiDraft).toBeNull();
+    expect(getState().logs).toEqual({});
   });
 });

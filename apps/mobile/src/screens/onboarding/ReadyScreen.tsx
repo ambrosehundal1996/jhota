@@ -33,7 +33,7 @@ export function ReadyScreen({ navigation }: OnboardingScreenProps<'Ready'>) {
           You’re all set!
         </AppText>
         <AppText variant="body" tone="secondary" align="center" style={styles.sub}>
-          Your daily protein range is {range.min}–{range.max}g. Let’s start making progress.
+          Your daily protein range is {range.min}–{range.max}g. Anywhere in that range counts as reaching your goal.
         </AppText>
       </View>
     </Screen>

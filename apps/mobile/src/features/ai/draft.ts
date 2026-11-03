@@ -11,14 +11,37 @@ import { nowIso, uuid } from '../../utils/id';
 import { addFoodLogs } from '../logging/actions';
 
 export const NOT_FOOD = 'not_food';
+export const ANALYSIS_TIMEOUT = 'timeout';
 
 const round1 = (v: number) => Math.round(v * 10) / 10;
+
+let analysisRun = 0;
+let analysisAbort: AbortController | null = null;
+
+function beginAnalysisRun(): { run: number; signal: AbortSignal } {
+  analysisAbort?.abort();
+  analysisRun += 1;
+  analysisAbort = new AbortController();
+  return { run: analysisRun, signal: analysisAbort.signal };
+}
+
+function isStale(run: number): boolean {
+  return run !== analysisRun || !getState().aiDraft;
+}
+
+/** Drops an in-flight upload/analysis so a late response cannot change UI or save. */
+export function cancelAnalysis(): void {
+  analysisAbort?.abort();
+  analysisAbort = null;
+  analysisRun += 1;
+}
 
 function patchDraft(patch: Partial<AiDraft>): void {
   setState(s => (s.aiDraft ? { aiDraft: { ...s.aiDraft, ...patch } } : {}));
 }
 
 export function startDraft(photoUri: string, date: LocalDate): void {
+  cancelAnalysis();
   setState({
     aiDraft: {
       id: uuid(),
@@ -80,6 +103,7 @@ export async function runAnalysis(): Promise<void> {
   const previousAnalysisId = draft.analysisId;
   const context = draft.context.trim();
   const started = Date.now();
+  const { run, signal } = beginAnalysisRun();
   analytics.track('ai_photo_started', { retry: draft.status === 'failed' || clarifying, has_context: !!context });
   try {
     let storagePath = draft.storagePath;
@@ -93,10 +117,12 @@ export async function runAnalysis(): Promise<void> {
       const userId = (await ensureSession()) ?? getState().userId;
       if (userId === LOCAL_USER_ID) throw new ApiError(0, 'offline', 'Photo estimates need a connection.');
       storagePath = await uploadMealPhoto(draft.photoUri, userId);
+      if (isStale(run)) return;
       patchDraft({ storagePath });
     }
     patchDraft({ status: 'analyzing', error: null });
-    const { analysisId, estimate } = await analyzeMealPhoto(storagePath, context);
+    const { analysisId, estimate } = await analyzeMealPhoto(storagePath, context, signal);
+    if (isStale(run)) return;
     if (previousAnalysisId && previousAnalysisId !== analysisId) {
       enqueueUpdate('ai_photo_analyses', previousAnalysisId, { status: 'discarded' });
     }
@@ -133,10 +159,24 @@ export async function runAnalysis(): Promise<void> {
       analytics.track('ai_clarification_completed', { outcome: 'reanalyzed', overall_confidence: estimate.overall_confidence });
     }
   } catch (error) {
+    if (isStale(run)) return;
     const apiError = error instanceof ApiError ? error : null;
-    patchDraft({ status: clarifying ? 'clarify' : 'failed', error: apiError?.message ?? 'Something went wrong. Please try again.' });
+    if (apiError?.code === 'cancelled') return;
+    const fallback = apiError?.message ?? 'Something went wrong. Please try again.';
+    patchDraft({
+      status: clarifying ? 'clarify' : 'failed',
+      error: !clarifying && apiError?.code === 'timeout' ? ANALYSIS_TIMEOUT : fallback,
+    });
     analytics.track('ai_photo_failed', { code: apiError?.code ?? 'unknown', status: apiError?.status ?? 0 });
   }
+}
+
+/** Stop the in-flight request and return to the photo preview. Does not log anything. */
+export function stopAnalysisKeepPhoto(): void {
+  const draft = getState().aiDraft;
+  cancelAnalysis();
+  if (!draft || (draft.status !== 'uploading' && draft.status !== 'analyzing')) return;
+  patchDraft({ status: 'picked', error: null });
 }
 
 /** From a clarification request, keep the defensible items the model did return. */
@@ -221,7 +261,22 @@ export function rescaleDraftTotal(nextTotal: number): void {
   patchDraft({ items });
 }
 
-/** Logs the confirmed items. Nothing from AI is ever logged without this explicit step. */
+const NOTES_MAX = 1500;
+
+/** One line per ingredient for the food-log notes field. */
+export function ingredientNotes(items: Pick<AiDraftItem, 'name' | 'portion' | 'protein_g'>[]): string {
+  const text = items
+    .map(item => {
+      const bits = [item.name.trim() || 'Item'];
+      if (item.portion.trim()) bits.push(item.portion.trim());
+      bits.push(`${Math.round(item.protein_g)}g`);
+      return bits.join(' · ');
+    })
+    .join('\n');
+  return text.length <= NOTES_MAX ? text : `${text.slice(0, NOTES_MAX - 1)}…`;
+}
+
+/** Logs one meal. Ingredients are stored in notes, not as separate rows. */
 export function confirmDraft(): FoodLog[] {
   const draft = getState().aiDraft;
   if (!draft || draft.status !== 'ready') return [];
@@ -236,16 +291,16 @@ export function confirmDraft(): FoodLog[] {
       )
     : true;
 
-  const logs = addFoodLogs(
-    items.map(item => ({
+  const logs = addFoodLogs([
+    {
       food: {
-        food_name: item.name,
+        food_name: 'Meal',
         brand: null,
         serving_quantity: null,
-        serving_unit: item.portion || null,
-        serving_description: item.portion,
+        serving_unit: null,
+        serving_description: items.length === 1 ? items[0]!.portion : `${items.length} items`,
         serving_grams: null,
-        protein_g: item.protein_g,
+        protein_g: total,
         calories: null,
         carbs_g: null,
         fat_g: null,
@@ -256,13 +311,16 @@ export function confirmDraft(): FoodLog[] {
       },
       date: draft.date,
       source: 'ai_photo' as const,
+      photoUri: draft.photoUri,
+      photoStoragePath: draft.storagePath,
+      notes: ingredientNotes(items),
       ai: {
         analysisId: draft.analysisId,
-        originalProteinG: item.original_protein_g,
-        wasEdited: item.original_protein_g === null || Math.round(item.original_protein_g) !== Math.round(item.protein_g),
+        originalProteinG: draft.rawTotal,
+        wasEdited,
       },
-    })),
-  );
+    },
+  ]);
 
   if (draft.analysisId) {
     enqueueUpdate('ai_photo_analyses', draft.analysisId, {
@@ -300,6 +358,7 @@ export function confirmDraft(): FoodLog[] {
 
 export function discardDraft(): void {
   const draft = getState().aiDraft;
+  cancelAnalysis();
   if (draft?.analysisId) enqueueUpdate('ai_photo_analyses', draft.analysisId, { status: 'discarded' });
   setState({ aiDraft: null });
 }

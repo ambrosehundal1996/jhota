@@ -1,10 +1,11 @@
-import React, { useEffect, useState } from 'react';
-import { Alert, Image, Linking, StyleSheet, TextInput, View } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { Alert, Linking, StyleSheet, TextInput, View } from 'react-native';
 import { launchCamera, launchImageLibrary, type ImagePickerResponse } from 'react-native-image-picker';
 import { AppText, Button, Card, EmptyState, Icon, Screen, SheetHeader, showToast } from '../../components';
 import {
   abandonClarification,
   acceptRoughEstimate,
+  ANALYSIS_TIMEOUT,
   discardDraft,
   draftTotal,
   hasNewContext,
@@ -12,11 +13,12 @@ import {
   runAnalysis,
   setDraftContext,
   startDraft,
+  stopAnalysisKeepPhoto,
 } from '../../features/ai/draft';
 import type { LogScreenProps } from '../../navigation/types';
 import { useAppStore } from '../../state/appStore';
 import { colors, radii, spacing, typography } from '../../theme';
-import { EstimateProgress } from './EstimateProgress';
+import { MealAnalysisLoading } from './MealAnalysisLoading';
 import { closeLog, useLogContext } from './useLogContext';
 
 const PICKER_OPTIONS = { mediaType: 'photo', maxWidth: 1280, maxHeight: 1280, quality: 0.7, includeBase64: false } as const;
@@ -25,15 +27,34 @@ export function PhotoScreen({ navigation, route }: LogScreenProps<'Photo'>) {
   const { date } = useLogContext(route.params);
   const draft = useAppStore(s => s.aiDraft);
   const busy = draft?.status === 'uploading' || draft?.status === 'analyzing';
-  const [runToken, setRunToken] = useState(0);
-  const startEstimate = () => {
-    setRunToken(n => n + 1);
-    void runAnalysis();
-  };
+  const inFlight = useRef(false);
+  const estimateGen = useRef(0);
 
   useEffect(() => {
     if (draft?.status === 'ready') navigation.navigate('PhotoReview');
   }, [draft?.status, navigation]);
+
+  const startEstimate = () => {
+    if (inFlight.current || busy) return;
+    inFlight.current = true;
+    const gen = ++estimateGen.current;
+    void runAnalysis().finally(() => {
+      if (estimateGen.current === gen) inFlight.current = false;
+    });
+  };
+
+  const abandonKeepPhoto = () => {
+    estimateGen.current += 1;
+    inFlight.current = false;
+    stopAnalysisKeepPhoto();
+  };
+
+  const close = () => {
+    estimateGen.current += 1;
+    inFlight.current = false;
+    discardDraft();
+    closeLog(navigation);
+  };
 
   const handlePick = (response: ImagePickerResponse) => {
     if (response.didCancel) return;
@@ -59,16 +80,10 @@ export function PhotoScreen({ navigation, route }: LogScreenProps<'Photo'>) {
   const takePhoto = () => launchCamera({ ...PICKER_OPTIONS, saveToPhotos: false, cameraType: 'back' }, handlePick);
   const choosePhoto = () => launchImageLibrary({ ...PICKER_OPTIONS, selectionLimit: 1 }, handlePick);
 
-  const cancel = () => {
-    if (busy) return;
-    discardDraft();
-    closeLog(navigation);
-  };
-
   if (!draft) {
     return (
       <Screen edges={['bottom']}>
-        <SheetHeader title="AI photo" onClose={() => closeLog(navigation)} />
+        <SheetHeader title="Log a Meal" onClose={() => closeLog(navigation)} />
         <EmptyState icon="camera" title="Snap your meal" message="We’ll estimate the protein. You review and edit everything before it’s logged.">
           <Button label="Take photo" icon="camera" variant="filled" onPress={takePhoto} testID="take-photo" />
           <Button label="Choose from library" icon="image" variant="secondary" onPress={choosePhoto} />
@@ -92,12 +107,12 @@ export function PhotoScreen({ navigation, route }: LogScreenProps<'Photo'>) {
   return (
     <Screen
       edges={['bottom']}
-      keyboard
+      keyboard={!busy}
       footer={
-        notFood ? (
+        busy ? undefined : notFood ? (
           <>
-            <Button label="Try another photo" variant="filled" onPress={() => { discardDraft(); choosePhoto(); }} />
-            <Button label="Quick add instead" variant="ghost" onPress={() => { discardDraft(); navigation.replace('QuickAdd', { date }); }} />
+            <Button label="Try again" variant="filled" onPress={() => { discardDraft(); choosePhoto(); }} />
+            <Button label="Enter protein manually" variant="ghost" onPress={() => { discardDraft(); navigation.replace('QuickAdd', { date }); }} />
           </>
         ) : clarify ? (
           <>
@@ -115,41 +130,36 @@ export function PhotoScreen({ navigation, route }: LogScreenProps<'Photo'>) {
           </>
         ) : failed ? (
           <>
-            <Button label="Retry" variant="filled" onPress={startEstimate} testID="retry-analysis" />
-            <Button label="Quick add instead" variant="ghost" onPress={() => { discardDraft(); navigation.replace('QuickAdd', { date }); }} />
+            <Button label="Try again" variant="filled" onPress={startEstimate} testID="retry-analysis" />
+            <Button label="Enter protein manually" variant="ghost" onPress={() => { discardDraft(); navigation.replace('QuickAdd', { date }); }} />
           </>
         ) : (
-          <Button label={busy ? 'Estimating…' : 'Estimate protein'} variant="filled" loading={busy} disabled={busy} onPress={startEstimate} testID="estimate" />
+          <Button label="Estimate protein" variant="filled" onPress={startEstimate} testID="estimate" />
         )
       }
     >
-      <SheetHeader title="AI photo" onClose={cancel} />
+      <SheetHeader title="Log a Meal" onClose={close} />
       {draft.photoUri ? (
-        <View style={styles.photoWrap}>
-          <Image source={{ uri: draft.photoUri }} style={styles.photo} accessibilityLabel="Your meal photo" />
-          {busy ? <View style={styles.photoOverlay} /> : null}
-        </View>
-      ) : null}
-
-      {busy && (draft.status === 'uploading' || draft.status === 'analyzing') ? (
-        <EstimateProgress status={draft.status} runToken={runToken} />
+        <MealAnalysisLoading uri={draft.photoUri} analyzing={busy} onCancel={abandonKeepPhoto} />
       ) : null}
 
       {notFood ? (
         <Card style={styles.message}>
           <AppText variant="bodyStrong">We couldn’t spot food in this photo</AppText>
           <AppText variant="caption" tone="secondary">
-            Try a clearer shot of the plate, or add the protein yourself.
+            Try a clearer shot of the plate, or add the protein yourself. Your photo is still here.
           </AppText>
         </Card>
       ) : failed ? (
         <Card style={styles.message}>
           <View style={styles.row}>
             <Icon name="cloudOff" size={18} color={colors.textSecondary} />
-            <AppText variant="bodyStrong">Estimate didn’t finish</AppText>
+            <AppText variant="bodyStrong">Couldn’t analyze this meal.</AppText>
           </View>
           <AppText variant="caption" tone="secondary">
-            {draft.error} Your photo is saved here, so you can retry.
+            {draft.error === ANALYSIS_TIMEOUT
+              ? 'This took too long. Please try again or enter your protein manually.'
+              : 'Please try again or enter your protein manually.'}
           </AppText>
         </Card>
       ) : busy ? null : (
@@ -184,12 +194,6 @@ export function PhotoScreen({ navigation, route }: LogScreenProps<'Photo'>) {
 
 const styles = StyleSheet.create({
   privacy: { marginTop: spacing.md, paddingHorizontal: spacing.xl },
-  photoWrap: { borderRadius: radii.lg, overflow: 'hidden', backgroundColor: colors.surface, marginTop: spacing.sm },
-  photo: { width: '100%', aspectRatio: 4 / 3 },
-  photoOverlay: {
-    ...StyleSheet.absoluteFill,
-    backgroundColor: 'rgba(0,0,0,0.22)',
-  },
   message: { marginTop: spacing.lg, gap: spacing.xs },
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   context: { marginTop: spacing.lg, gap: spacing.sm },

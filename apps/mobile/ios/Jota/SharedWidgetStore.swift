@@ -21,7 +21,7 @@ class SharedWidgetStore: NSObject {
     }
     defaults.set(json, forKey: Self.snapshotKey)
     WidgetCenter.shared.reloadAllTimelines()
-    WidgetLiveActivity.endAll()
+    WidgetLiveActivity.push(json: json)
     resolve(nil)
   }
 

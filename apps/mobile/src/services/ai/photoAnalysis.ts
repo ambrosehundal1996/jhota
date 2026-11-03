@@ -34,10 +34,29 @@ export async function uploadMealPhoto(localUri: string, userId: string): Promise
   return path;
 }
 
-export function analyzeMealPhoto(storagePath: string, userContext?: string): Promise<AnalyzePhotoResponse> {
+const signedUrlCache = new Map<string, { url: string; expiresAt: number }>();
+
+/** Hour-long signed URL for a private meal photo. Cached so list rows don’t refetch. */
+export async function mealPhotoSignedUrl(storagePath: string): Promise<string | null> {
+  const cached = signedUrlCache.get(storagePath);
+  if (cached && cached.expiresAt > Date.now() + 15_000) return cached.url;
+  const supabase = getSupabase();
+  if (!supabase) return null;
+  const { data, error } = await supabase.storage.from('meal-photos').createSignedUrl(storagePath, 3600);
+  if (error || !data?.signedUrl) return null;
+  signedUrlCache.set(storagePath, { url: data.signedUrl, expiresAt: Date.now() + 3_500_000 });
+  return data.signedUrl;
+}
+
+export function analyzeMealPhoto(
+  storagePath: string,
+  userContext?: string,
+  signal?: AbortSignal,
+): Promise<AnalyzePhotoResponse> {
   return apiFetch<AnalyzePhotoResponse>('/api/ai/analyze-photo', {
     method: 'POST',
     body: { storagePath, userContext: userContext?.trim() || undefined },
     timeoutMs: 60_000,
+    signal,
   });
 }

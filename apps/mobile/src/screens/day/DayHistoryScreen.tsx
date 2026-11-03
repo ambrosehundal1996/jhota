@@ -14,12 +14,13 @@ import {
   showToast,
   TextField,
 } from '../../components';
-import { copyLogsToDate, removeDailyOverride, saveMealFromLogs, setDailyOverride, undoLogs } from '../../features/logging/actions';
+import { copyLogsToDate, deleteFoodLog, removeDailyOverride, saveMealFromLogs, setDailyOverride, undoLogs } from '../../features/logging/actions';
 import { useDay, useTotalsByDate } from '../../hooks/useAppData';
 import { useLocalToday } from '../../hooks/useLocalToday';
 import { openLog } from '../../navigation/openLog';
 import type { RootScreenProps } from '../../navigation/types';
 import { spacing } from '../../theme';
+import type { FoodLog } from '../../types/models';
 import { formatDayTitle, rangeLabel } from '../../utils/format';
 import { LoggedFoodsCard } from '../today/LoggedFoodsCard';
 import { OverrideBanner } from '../today/OverrideBanner';
@@ -55,6 +56,11 @@ export function DayHistoryScreen({ navigation, route }: RootScreenProps<'Day'>) 
     saveMealFromLogs(mealName, day.logs);
     setSaving(false);
     showToast('Saved to My foods');
+  };
+
+  const removeLog = (log: FoodLog) => {
+    const undo = deleteFoodLog(log.id);
+    showToast(`Removed ${log.food_name}`, { label: 'Undo', onPress: undo });
   };
 
   const removeOverride = () => {
@@ -119,6 +125,7 @@ export function DayHistoryScreen({ navigation, route }: RootScreenProps<'Day'>) 
               logs={day.logs}
               muted={!!day.override}
               onPressLog={log => openLog(navigation, 'FoodDetail', { mode: 'edit', logId: log.id })}
+              onDeleteLog={removeLog}
             />
             <View style={styles.groupActions}>
               {!isToday ? (

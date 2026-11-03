@@ -23,6 +23,7 @@ import { RangeScreen } from '../screens/onboarding/RangeScreen';
 import { ReadyScreen } from '../screens/onboarding/ReadyScreen';
 import { DisplayNameScreen } from '../screens/profile/DisplayNameScreen';
 import { FeedbackScreen } from '../screens/today/FeedbackScreen';
+import { WidgetPreviewScreen } from '../screens/today/WidgetPreviewScreen';
 import { LogHomeScreen } from '../screens/log/LogHomeScreen';
 import { SearchScreen } from '../screens/log/SearchScreen';
 import { FoodDetailScreen } from '../screens/log/FoodDetailScreen';
@@ -70,7 +71,12 @@ function LogNavigator() {
   );
 }
 
-const TAB_ICONS: Record<keyof TabParamList, IconName> = { Today: 'today', Progress: 'progress', Profile: 'profile' };
+const TAB_ICONS: Record<keyof TabParamList, IconName> = {
+  Today: 'today',
+  Progress: 'progress',
+  Feedback: 'feedback',
+  Profile: 'profile',
+};
 
 function MainTabs() {
   return (
@@ -86,6 +92,7 @@ function MainTabs() {
     >
       <Tabs.Screen name="Today" component={TodayScreen} />
       <Tabs.Screen name="Progress" component={ProgressScreen} />
+      <Tabs.Screen name="Feedback" component={FeedbackScreen} />
       <Tabs.Screen name="Profile" component={ProfileScreen} />
     </Tabs.Navigator>
   );
@@ -111,9 +118,9 @@ export function RootNavigator() {
           <Root.Screen name="GoalTypeSettings" component={GoalTypeScreen} />
           <Root.Screen name="NotificationSettings" component={NotificationSettingsScreen} />
           <Root.Screen name="DisplayName" component={DisplayNameScreen} />
-          <Root.Screen name="Feedback" component={FeedbackScreen} options={{ presentation: 'modal' }} />
         </>
       )}
+      <Root.Screen name="WidgetPreview" component={WidgetPreviewScreen} />
     </Root.Navigator>
   );
 }

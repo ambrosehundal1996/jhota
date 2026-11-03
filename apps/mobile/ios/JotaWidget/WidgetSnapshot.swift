@@ -41,11 +41,16 @@ struct WidgetSnapshot: Codable {
   }
 
   static func localDate(_ date: Date) -> String {
-    let formatter = DateFormatter()
-    formatter.calendar = Calendar(identifier: .gregorian)
-    formatter.locale = Locale(identifier: "en_US_POSIX")
-    formatter.dateFormat = "yyyy-MM-dd"
-    return formatter.string(from: date)
+    var calendar = Calendar(identifier: .gregorian)
+    calendar.timeZone = TimeZone.current
+    let parts = calendar.dateComponents([.year, .month, .day], from: date)
+    return String(format: "%04d-%02d-%02d", parts.year ?? 1970, parts.month ?? 1, parts.day ?? 1)
+  }
+
+  static func startOfNextDay(after date: Date = Date()) -> Date {
+    let calendar = Calendar.current
+    let start = calendar.startOfDay(for: date)
+    return calendar.date(byAdding: .day, value: 1, to: start) ?? start.addingTimeInterval(86_400)
   }
 
   /// A snapshot written on an earlier day shows today as a fresh 0g day.
@@ -115,10 +120,10 @@ struct WidgetSnapshot: Codable {
     UserDefaults(suiteName: Self.appGroup)?.set(json, forKey: Self.key)
   }
 
-  /// Drops any leftover Lock Screen Live Activity. No-op in the widget extension.
-  func dismissLiveActivity() {
+  /// No-op inside the widget extension; Live Activities belong to the app process.
+  func pushLiveActivity() {
     guard Bundle.main.bundleIdentifier?.hasSuffix(".widget") != true else { return }
-    WidgetLiveActivity.endAll()
+    WidgetLiveActivity.push(self)
   }
 }
 
@@ -192,6 +197,59 @@ enum WidgetProgressState: Equatable {
 }
 
 enum WidgetLiveActivity {
+  /// Re-pushes today's resolved snapshot. The lock-screen Live Activity is a frozen
+  /// banner — WidgetKit's midnight timeline does not update it.
+  static func refreshForToday() {
+    guard Bundle.main.bundleIdentifier?.hasSuffix(".widget") != true else { return }
+    guard let stored = WidgetSnapshot.load() else { return }
+    push(stored)
+  }
+
+  static func push(_ snapshot: WidgetSnapshot) {
+    guard Bundle.main.bundleIdentifier?.hasSuffix(".widget") != true else { return }
+    guard ActivityAuthorizationInfo().areActivitiesEnabled else { return }
+    let resolved = snapshot.resolved(for: Date())
+    if resolved.date != snapshot.date {
+      resolved.save()
+      WidgetCenter.shared.reloadAllTimelines()
+    }
+    let state = ProteinActivityAttributes.ContentState(
+      date: resolved.date,
+      total: resolved.total,
+      toGoal: resolved.toGoal,
+      firstName: resolved.firstName,
+      reached: resolved.reached,
+      goalMin: resolved.goalMin,
+      goalMax: resolved.goalMax,
+      draftGrams: nil
+    )
+    let content = ActivityContent(state: state, staleDate: WidgetSnapshot.startOfNextDay())
+    Task { @MainActor in
+      do {
+        if let activity = Activity<ProteinActivityAttributes>.activities.first {
+          await activity.update(content)
+        } else {
+          _ = try Activity.request(
+            attributes: ProteinActivityAttributes(),
+            content: content,
+            pushType: nil
+          )
+        }
+      } catch {
+        #if DEBUG
+        print("[widget] live activity failed:", error)
+        #endif
+      }
+    }
+  }
+
+  static func push(json: String) {
+    guard let data = json.data(using: .utf8),
+          let snapshot = try? JSONDecoder().decode(WidgetSnapshot.self, from: data)
+    else { return }
+    push(snapshot)
+  }
+
   static func endAll() {
     let activities = Activity<ProteinActivityAttributes>.activities
     guard !activities.isEmpty else { return }

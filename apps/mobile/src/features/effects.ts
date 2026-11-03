@@ -1,9 +1,32 @@
+import { toLocalDate } from '@jota/domain';
 import { AppState } from 'react-native';
 import { getState, useAppStore, type AppData } from '../state/appStore';
 import { reportDeliveredReminders, syncReminders } from '../services/notifications/reminders';
 import { updateWidget } from '../services/widget/widgetBridge';
 
 let timer: ReturnType<typeof setTimeout> | null = null;
+let midnightTimer: ReturnType<typeof setTimeout> | null = null;
+
+function msUntilNextLocalMidnight(now = new Date()): number {
+  const next = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 1);
+  return Math.max(1_000, next.getTime() - now.getTime());
+}
+
+function scheduleMidnightWidgetRefresh(): () => void {
+  const arm = () => {
+    if (midnightTimer) clearTimeout(midnightTimer);
+    midnightTimer = setTimeout(() => {
+      midnightTimer = null;
+      void updateWidget(true);
+      arm();
+    }, msUntilNextLocalMidnight());
+  };
+  arm();
+  return () => {
+    if (midnightTimer) clearTimeout(midnightTimer);
+    midnightTimer = null;
+  };
+}
 
 function runEffects(): void {
   if (timer) clearTimeout(timer);
@@ -18,6 +41,7 @@ const watched = (s: AppData) => [s.logs, s.overrides, s.profile, s.notificationP
 
 export function startDataEffects(): () => void {
   runEffects();
+  void updateWidget(true);
   void reportDeliveredReminders();
   let previous = watched(getState());
   const unsubscribe = useAppStore.subscribe(state => {
@@ -33,8 +57,18 @@ export function startDataEffects(): () => void {
     void updateWidget(true);
     void reportDeliveredReminders();
   });
+  const stopMidnight = scheduleMidnightWidgetRefresh();
+  let lastDate = toLocalDate(new Date());
+  const datePoll = setInterval(() => {
+    const today = toLocalDate(new Date());
+    if (today === lastDate) return;
+    lastDate = today;
+    void updateWidget(true);
+  }, 30_000);
   return () => {
     unsubscribe();
     appSub.remove();
+    stopMidnight();
+    clearInterval(datePoll);
   };
 }

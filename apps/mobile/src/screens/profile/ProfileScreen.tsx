@@ -165,6 +165,11 @@ export function ProfileScreen() {
         </>
       ) : null}
 
+      <SectionLabel>Preview</SectionLabel>
+      <ListGroup>
+        <ListRow title="Widget preview" subtitle="Home Screen card and Lock Screen Live Activity" onPress={() => navigation.navigate('WidgetPreview')} last />
+      </ListGroup>
+
       <SectionLabel>Account</SectionLabel>
       <ListGroup>
         {appleLinked ? (

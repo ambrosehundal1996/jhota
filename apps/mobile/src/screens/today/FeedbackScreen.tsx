@@ -1,23 +1,25 @@
-import React, { useEffect, useState } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
+import React, { useCallback, useState } from 'react';
 import { Alert, StyleSheet, View } from 'react-native';
 import { analytics } from '../../analytics';
-import { AppText, Button, Screen, SheetHeader, showToast, TextField } from '../../components';
-import type { RootScreenProps } from '../../navigation/types';
+import { AppText, Button, Screen, showToast, TextField } from '../../components';
 import { ApiError, apiFetch } from '../../services/api/client';
 import { useAppStore } from '../../state/appStore';
 import { spacing } from '../../theme';
 
 const MAX_NOTE = 1500;
 
-export function FeedbackScreen({ navigation }: RootScreenProps<'Feedback'>) {
+export function FeedbackScreen() {
   const displayName = useAppStore(s => s.profile?.display_name?.trim() || s.onboarding.displayName?.trim() || null);
   const [note, setNote] = useState('');
   const [sending, setSending] = useState(false);
   const trimmed = note.trim();
 
-  useEffect(() => {
-    analytics.track('feedback_opened');
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      analytics.track('feedback_opened');
+    }, []),
+  );
 
   const send = async () => {
     if (!trimmed || sending) return;
@@ -28,8 +30,8 @@ export function FeedbackScreen({ navigation }: RootScreenProps<'Feedback'>) {
         body: { message: trimmed, displayName },
       });
       analytics.track('feedback_sent');
+      setNote('');
       showToast('Thanks — we got it');
-      navigation.goBack();
     } catch (error) {
       const message =
         error instanceof ApiError ? error.message : 'Could not send that just now. Please try again.';
@@ -40,8 +42,14 @@ export function FeedbackScreen({ navigation }: RootScreenProps<'Feedback'>) {
   };
 
   return (
-    <Screen keyboard edges={['bottom']} footer={<Button label="Send" onPress={() => void send()} disabled={!trimmed} loading={sending} />}>
-      <SheetHeader title="Feedback" onClose={() => navigation.goBack()} />
+    <Screen
+      edges={['top']}
+      keyboard
+      footer={<Button label="Send" onPress={() => void send()} disabled={!trimmed} loading={sending} />}
+    >
+      <AppText variant="title" accessibilityRole="header" style={styles.title}>
+        Feedback
+      </AppText>
       <AppText variant="body" tone="secondary" style={styles.sub}>
         Type a note. We’ll send it to the Jota team — no Mail app.
       </AppText>
@@ -55,7 +63,6 @@ export function FeedbackScreen({ navigation }: RootScreenProps<'Feedback'>) {
           numberOfLines={6}
           textAlignVertical="top"
           maxLength={MAX_NOTE}
-          autoFocus
           style={styles.input}
           testID="feedback-input"
         />
@@ -65,7 +72,8 @@ export function FeedbackScreen({ navigation }: RootScreenProps<'Feedback'>) {
 }
 
 const styles = StyleSheet.create({
-  sub: { marginTop: spacing.xs },
+  title: { marginTop: spacing.lg },
+  sub: { marginTop: spacing.sm },
   form: { marginTop: spacing.xl },
   input: { minHeight: 140, paddingTop: spacing.md },
 });

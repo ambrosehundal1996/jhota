@@ -124,6 +124,7 @@ module.exports = (_env, argv) => {
       port: Number(process.env.WEB_PORT) || 8080,
       historyApiFallback: true,
       hot: true,
+      open: ['/analysis-preview'],
       client: { overlay: { warnings: false, errors: true } },
     },
     performance: { hints: false },

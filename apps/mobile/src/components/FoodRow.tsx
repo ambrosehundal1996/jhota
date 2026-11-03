@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { colors, hitSlop, radii, spacing } from '../theme';
 import { AppText } from './AppText';
 import { Icon } from './Icon';
+import { MealPhotoThumb } from './MealPhotoThumb';
 
 interface Props {
   name: string;
@@ -11,6 +12,8 @@ interface Props {
   /** Muted secondary nutrition text (calories), only on search/detail surfaces. */
   meta?: string | null;
   protein: number;
+  photoUri?: string | null;
+  photoStoragePath?: string | null;
   onPress?: () => void;
   onAdd?: () => void;
   addLabel?: string;
@@ -18,7 +21,7 @@ interface Props {
   testID?: string;
 }
 
-export function FoodRow({ name, brand, detail, meta, protein, onPress, onAdd, addLabel, last, testID }: Props) {
+export function FoodRow({ name, brand, detail, meta, protein, photoUri, photoStoragePath, onPress, onAdd, addLabel, last, testID }: Props) {
   return (
     <Pressable
       testID={testID}
@@ -28,6 +31,9 @@ export function FoodRow({ name, brand, detail, meta, protein, onPress, onAdd, ad
       accessibilityLabel={`${name}${brand ? `, ${brand}` : ''}, ${Math.round(protein)} grams protein`}
       style={({ pressed }) => [styles.row, !last && styles.divider, pressed && { opacity: 0.7 }]}
     >
+      {photoUri || photoStoragePath ? (
+        <MealPhotoThumb localUri={photoUri} storagePath={photoStoragePath} accessibilityLabel={`Photo of ${name}`} />
+      ) : null}
       <View style={styles.text}>
         {brand ? (
           <AppText variant="eyebrow" tone="tertiary" numberOfLines={1}>

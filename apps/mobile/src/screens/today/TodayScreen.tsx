@@ -13,12 +13,13 @@ import {
   showToast,
   useIsOffline,
 } from '../../components';
-import { relogRecent, removeDailyOverride, setDailyOverride, undoLogs } from '../../features/logging/actions';
+import { deleteFoodLog, relogRecent, removeDailyOverride, setDailyOverride, undoLogs } from '../../features/logging/actions';
 import { useDay, useRecents, useTotalsByDate } from '../../hooks/useAppData';
 import { useLocalToday } from '../../hooks/useLocalToday';
 import { openLog } from '../../navigation/openLog';
 import { getState, setState } from '../../state/appStore';
-import { colors, hitSlop, radii, shadows, spacing } from '../../theme';
+import { colors, radii, shadows, spacing } from '../../theme';
+import type { FoodLog } from '../../types/models';
 import { formatTodayHeader } from '../../utils/format';
 import { DailyProteinProgress } from './DailyProteinProgress';
 import { LoggedFoodsCard } from './LoggedFoodsCard';
@@ -48,6 +49,11 @@ export function TodayScreen() {
     const log = relogRecent(recent, today);
     if (!log) return;
     showToast(`Added ${recent.food_name} · ${Math.round(log.protein_g)}g`, { label: 'Undo', onPress: () => undoLogs([log.id]) });
+  };
+
+  const removeLog = (log: FoodLog) => {
+    const undo = deleteFoodLog(log.id);
+    showToast(`Removed ${log.food_name}`, { label: 'Undo', onPress: undo });
   };
 
   const removeOverride = () => {
@@ -91,18 +97,6 @@ export function TodayScreen() {
           testID="log-food"
         >
           <Icon name="plus" size={40} color={colors.white} strokeWidth={2.4} />
-        </Pressable>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Send feedback"
-          hitSlop={hitSlop}
-          onPress={() => navigation.navigate('Feedback')}
-          style={({ pressed }) => [styles.feedback, pressed && styles.pressed]}
-          testID="send-feedback"
-        >
-          <AppText variant="caption" tone="accent">
-            Send feedback
-          </AppText>
         </Pressable>
       </View>
 
@@ -150,6 +144,7 @@ export function TodayScreen() {
           logs={day.logs}
           muted={!!day.override}
           onPressLog={log => openLog(navigation, 'FoodDetail', { mode: 'edit', logId: log.id })}
+          onDeleteLog={removeLog}
         />
       </View>
 
@@ -174,8 +169,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.lg,
     marginBottom: spacing.md,
   },
-  actions: { marginTop: spacing.xl, alignItems: 'center', gap: spacing.md },
-  feedback: { paddingVertical: spacing.sm },
+  actions: { marginTop: spacing.xl, alignItems: 'center' },
   logButton: {
     width: 84,
     height: 84,

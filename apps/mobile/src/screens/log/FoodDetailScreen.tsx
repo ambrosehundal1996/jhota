@@ -188,6 +188,11 @@ function EditLog({ logId, navigation }: { logId: string; navigation: LogScreenPr
       <AppText variant="body" tone="secondary">
         {[log.brand, formatShortDay(log.log_date)].filter(Boolean).join(' · ')}
       </AppText>
+      {log.notes ? (
+        <AppText variant="caption" tone="secondary" style={styles.notes}>
+          {log.notes}
+        </AppText>
+      ) : null}
 
       {scalable ? (
         <>
@@ -247,4 +252,5 @@ const styles = StyleSheet.create({
   field: { marginTop: spacing.xl },
   attribution: { marginTop: spacing.xl },
   delete: { marginTop: spacing.xxl },
+  notes: { marginTop: spacing.sm },
 });

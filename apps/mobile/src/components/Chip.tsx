@@ -29,7 +29,7 @@ export function Chip({ label, icon, tone = 'mint', onPress }: Props) {
   );
 }
 
-/** Large tile for logging methods (AI Photo, Quick Add, Set Total, Scan). */
+/** Large tile for logging methods (Log a Meal, Quick Add, Set Total, Scan). */
 export function MethodTile({ label, icon, onPress, testID }: { label: string; icon: IconName; onPress: () => void; testID?: string }) {
   return (
     <Pressable

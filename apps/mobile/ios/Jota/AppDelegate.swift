@@ -28,8 +28,18 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
       in: window,
       launchOptions: launchOptions
     )
+    WidgetLiveActivity.refreshForToday()
 
     return true
+  }
+
+  func applicationDidBecomeActive(_ application: UIApplication) {
+    WidgetLiveActivity.refreshForToday()
+  }
+
+  /// Fires at midnight (and timezone changes) while the app is still in memory.
+  func applicationSignificantTimeChange(_ application: UIApplication) {
+    WidgetLiveActivity.refreshForToday()
   }
 
   // jota:// links from widgets and notifications.

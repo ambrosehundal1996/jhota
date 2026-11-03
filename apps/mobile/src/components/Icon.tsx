@@ -18,6 +18,7 @@ export type IconName =
   | 'today'
   | 'progress'
   | 'profile'
+  | 'feedback'
   | 'dumbbell'
   | 'trendDown'
   | 'heart'
@@ -105,6 +106,13 @@ export function Icon({ name, size = 22, color = colors.text, strokeWidth = 1.8 }
             <Circle cx="12" cy="12" r="9" {...p} />
             <Circle cx="12" cy="10" r="3" {...p} />
             <Path d="M6.5 18.2a6.5 6.5 0 0111 0" {...p} />
+          </>
+        );
+      case 'feedback':
+        return (
+          <>
+            <Path d="M5 6.5A1.5 1.5 0 016.5 5h11A1.5 1.5 0 0119 6.5v8A1.5 1.5 0 0117.5 16H9l-4 3.5z" {...p} />
+            <Path d="M8 9h8M8 12h5" {...p} />
           </>
         );
       case 'dumbbell':

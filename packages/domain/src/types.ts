@@ -55,6 +55,12 @@ export interface FoodLog {
   ai_analysis_id: string | null;
   ai_original_protein_g: number | null;
   ai_was_edited: boolean | null;
+  /** Private Storage path in meal-photos. Null for non-photo logs. */
+  photo_storage_path?: string | null;
+  /** On-device file URI. Not synced. */
+  photo_uri?: string | null;
+  /** Free-text notes. AI photo logs store the ingredient breakdown here. */
+  notes?: string | null;
   created_at: string;
   updated_at: string;
   deleted_at: string | null;
