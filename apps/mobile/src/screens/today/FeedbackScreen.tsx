@@ -51,7 +51,7 @@ export function FeedbackScreen() {
         Feedback
       </AppText>
       <AppText variant="body" tone="secondary" style={styles.sub}>
-        Type a note. We’ll send it to the Jota team — no Mail app.
+        Type a note. We’ll save it for the Jota team.
       </AppText>
       <View style={styles.form}>
         <TextField

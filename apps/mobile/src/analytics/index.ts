@@ -13,23 +13,49 @@ const consoleAdapter: AnalyticsAdapter = {
   },
 };
 
+function maskKey(key: string): string {
+  if (key.length < 8) return '(short)';
+  return `${key.slice(0, 7)}…${key.slice(-4)}`;
+}
+
 /** PostHog capture API over fetch; no SDK so the vendor stays swappable. */
 function posthogAdapter(apiKey: string, host: string): AnalyticsAdapter {
-  const send = (body: Record<string, unknown>) =>
-    fetch(`${host}/capture/`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ api_key: apiKey, ...body }),
-    }).catch(() => undefined);
+  const endpoint = `${host.replace(/\/$/, '')}/capture/`;
+  console.log(`[posthog] enabled host=${host} key=${maskKey(apiKey)}`);
+
+  const send = async (event: string, body: Record<string, unknown>) => {
+    try {
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ api_key: apiKey, ...body }),
+      });
+      const detail = response.ok ? '' : ` ${await response.text().catch(() => '')}`.slice(0, 200);
+      console.log(`[posthog] ${response.ok ? 'sent' : 'failed'} ${event} ${response.status}${detail}`);
+    } catch (error) {
+      console.warn(`[posthog] failed ${event} network`, error instanceof Error ? error.message : error);
+    }
+  };
+
   return {
     track: (event, props, distinctId) =>
-      void send({ event, distinct_id: distinctId, properties: { ...props, $lib: 'jota-ios' }, timestamp: new Date().toISOString() }),
-    identify: (distinctId, traits) => void send({ event: '$identify', distinct_id: distinctId, properties: { $set: traits } }),
+      void send(event, {
+        event,
+        distinct_id: distinctId,
+        properties: { ...props, $lib: 'jota-ios' },
+        timestamp: new Date().toISOString(),
+      }),
+    identify: (distinctId, traits) =>
+      void send('$identify', { event: '$identify', distinct_id: distinctId, properties: { $set: traits } }),
   };
 }
 
 const adapters: AnalyticsAdapter[] = [consoleAdapter];
-if (appConfig.posthogKey) adapters.push(posthogAdapter(appConfig.posthogKey, appConfig.posthogHost));
+if (appConfig.posthogKey) {
+  adapters.push(posthogAdapter(appConfig.posthogKey, appConfig.posthogHost));
+} else {
+  console.warn('[posthog] skipped — POSTHOG_API_KEY is empty. Events stay in the Metro log only.');
+}
 
 export const analytics = {
   track(event: AnalyticsEvent, props: AnalyticsProps = {}) {

@@ -5,6 +5,7 @@ A protein-first iOS app: set a daily protein range, log what you eat in seconds,
 | Path | What it is |
 | --- | --- |
 | `apps/mobile` | React Native (CLI, no Expo) iOS app with a WidgetKit extension |
+| `apps/web` | Marketing site (Next.js): landing page, privacy, support, terms, account deletion |
 | `apps/api` | Vercel Functions: food search proxy, AI photo estimates, RevenueCat webhook |
 | `packages/domain` | Pure TypeScript business rules (protein range, totals, streaks, reminders) shared by both |
 | `supabase` | Postgres schema, RLS policies, storage bucket, local config |
@@ -60,6 +61,17 @@ npm run ios                       # or open ios/Jota.xcworkspace
 #### Subscriptions
 
 Create an entitlement (default id `pro`) and an offering with monthly and annual products in RevenueCat. Give both App Store products a 7-day free introductory offer. The paywall reads prices and the trial from the offering; nothing is hard-coded. In debug builds you can skip the paywall from the paywall screen or Profile → Developer. The paywall is off unless `PAYWALL_ENABLED=true` (or `1`) in `apps/mobile/.env`; when off, RevenueCat is never configured, onboarding goes straight to the app, and Profile hides the subscription rows. If `REVENUECAT_IOS_API_KEY` is empty, the app also runs without a paywall.
+
+### Marketing site
+
+The public website lives in `apps/web` (Next.js). It is separate from the React Native web build.
+
+```sh
+npm run site          # http://localhost:3000
+npm run site:build
+```
+
+Deploy it as its own Vercel project with root directory `apps/web`. Routes are `/`, `/privacy`, `/support`, `/terms`, and `/delete-account`. Empty legal, store, and social fields are listed in `apps/web/PRELAUNCH.md` and on the privacy page checklist. Do not invent them.
 
 ### Web app
 

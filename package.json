@@ -15,7 +15,9 @@
     "ios": "npm run ios -w @jota/mobile --",
     "pods": "npm run pods -w @jota/mobile",
     "web": "npm run web -w @jota/mobile",
-    "build:web": "npm run build:web -w @jota/mobile"
+    "build:web": "npm run build:web -w @jota/mobile",
+    "site": "npm run dev -w @jota/web",
+    "site:build": "npm run build -w @jota/web"
   },
   "devDependencies": {
     "prettier": "2.8.8",
