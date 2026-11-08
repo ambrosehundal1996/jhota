@@ -104,4 +104,4 @@ Browser URLs use the deep-link paths, e.g. `/progress`, `/log/quick-add` or `/da
 - **Daily total.** The day's total is the sum of its logs, unless the user sets the day's total manually (`daily_overrides`). In that case the override wins and the logs are kept.
 - **Goal.** The suggested range is 0.7–1.0 g per lb, rounded to the nearest 5. Reaching the minimum counts as hitting the goal. A custom range is never overwritten without confirmation.
 - **Reminders.** A 2 PM nudge if nothing is logged, plus 4 PM and 7 PM reminders of how much protein is left. The schedule is re-planned whenever data changes.
-- **AI photos.** The photo is uploaded to private storage, and the API asks OpenAI for structured item estimates. The user reviews and edits everything before anything is logged. Analytics never include photo contents, food names, or typed text.
+- **AI photos.** The photo is uploaded to private storage, and the API asks OpenAI for structured item estimates. The user reviews and edits everything before anything is logged. Analytics never include photo contents, food names, or typed text and yea.
