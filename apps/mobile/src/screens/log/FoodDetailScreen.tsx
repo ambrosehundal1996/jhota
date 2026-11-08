@@ -43,6 +43,8 @@ function AddFood({ navigation, route }: Pick<LogScreenProps<'FoodDetail'>, 'navi
   const { date, isToday } = useLogContext(params);
   const [food, setFood] = useState<LoggableFood>(params.food);
   const [servings, setServings] = useState(params.servings ?? 1);
+  const [proteinText, setProteinText] = useState(() => trimNumber(round1(params.food.protein_g * (params.servings ?? 1))));
+  const [proteinEdited, setProteinEdited] = useState(false);
   const isFavorite = useAppStore(s => !!findFavorite(s, food));
 
   // Search results can be abbreviated; fetch full serving details when available.
@@ -60,11 +62,25 @@ function AddFood({ navigation, route }: Pick<LogScreenProps<'FoodDetail'>, 'navi
     };
   }, [params.food]);
 
-  const protein = round1(food.protein_g * servings);
+  useEffect(() => {
+    if (proteinEdited) return;
+    setProteinText(trimNumber(round1(food.protein_g * servings)));
+  }, [food, proteinEdited, servings]);
+
+  const protein = Number(proteinText);
+  const valid = Number.isFinite(protein) && protein >= 0 && protein <= 500;
   const calories = food.calories === null ? null : Math.round(food.calories * servings);
 
+  const changeServings = (next: number) => {
+    setServings(next);
+    setProteinEdited(false);
+    setProteinText(trimNumber(round1(food.protein_g * next)));
+  };
+
   const add = () => {
-    const log = addFoodLog({ food, servings, date, source: params.source });
+    if (!valid) return;
+    const factor = food.protein_g > 0 ? protein / food.protein_g : servings;
+    const log = addFoodLog({ food, servings: factor, date, source: params.source });
     if (!log) return;
     showToast(`Added ${food.food_name} · ${Math.round(log.protein_g)}g${isToday ? '' : ` to ${formatShortDay(date)}`}`, {
       label: 'Undo',
@@ -80,12 +96,13 @@ function AddFood({ navigation, route }: Pick<LogScreenProps<'FoodDetail'>, 'navi
 
   return (
     <Screen
+      keyboard
       footer={
         <Button
-          label={`Add to ${isToday ? 'today' : formatShortDay(date)} · ${Math.round(protein)}g`}
+          label={`Add to ${isToday ? 'today' : formatShortDay(date)} · ${valid ? `${Math.round(protein)}g` : 'protein'}`}
           variant="filled"
           onPress={add}
-          disabled={servings <= 0}
+          disabled={!valid}
           testID="add-food"
         />
       }
@@ -112,14 +129,8 @@ function AddFood({ navigation, route }: Pick<LogScreenProps<'FoodDetail'>, 'navi
       ) : null}
 
       <Card tone="mint" style={styles.hero}>
-        <AppText variant="display" accessibilityLabel={`${protein} grams protein`}>
-          {trimNumber(protein)}
-          <AppText variant="h2" tone="secondary">
-            g
-          </AppText>
-        </AppText>
         <AppText variant="body" tone="secondary">
-          protein · {servingText(food, servings)}
+          {servingText(food, servings)}
         </AppText>
         {calories !== null ? (
           <AppText variant="caption" tone="tertiary" style={styles.calories}>
@@ -128,9 +139,25 @@ function AddFood({ navigation, route }: Pick<LogScreenProps<'FoodDetail'>, 'navi
         ) : null}
       </Card>
 
+      <View style={styles.field}>
+        <TextField
+          label="Protein"
+          value={proteinText}
+          onChangeText={t => {
+            setProteinEdited(true);
+            setProteinText(t.replace(/[^0-9.]/g, ''));
+          }}
+          keyboardType="decimal-pad"
+          suffix="g"
+          size="large"
+          error={!valid ? 'Enter a number between 0 and 500.' : null}
+          testID="add-protein"
+        />
+      </View>
+
       <View style={styles.row}>
         <AppText variant="bodyStrong">Servings</AppText>
-        <Stepper value={servings} onChange={setServings} step={0.5} min={0.5} max={20} format={formatServings} label="Servings" />
+        <Stepper value={servings} onChange={changeServings} step={0.5} min={0.5} max={20} format={formatServings} label="Servings" />
       </View>
 
       {food.external_provider === 'off' ? (

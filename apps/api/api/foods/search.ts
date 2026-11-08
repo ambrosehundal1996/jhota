@@ -11,7 +11,7 @@ export const GET = handle(async request => {
   if (query.length < 2 || query.length > 80) {
     return errorResponse(400, 'invalid_query', 'Search for at least 2 characters.');
   }
-  const results = await searchFoods(query);
+  const results = await searchFoods(query, 10);
   const body: FoodSearchResponse = { query, results };
   return json(body);
 });

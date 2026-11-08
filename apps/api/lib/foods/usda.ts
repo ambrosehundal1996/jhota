@@ -255,8 +255,8 @@ export const usdaProvider: FoodProvider = {
   id: 'usda',
 
   async searchFoods(query, options) {
-    const limit = options?.limit ?? 25;
-    const data = await usdaSearch(query, 50, SEARCH_DATA_TYPES);
+    const limit = options?.limit ?? 10;
+    const data = await usdaSearch(query, 25, SEARCH_DATA_TYPES);
     const seen = new Set<string>();
     const results: NormalizedFood[] = [];
     for (const food of rankUsdaResults(query, data.foods ?? [])) {

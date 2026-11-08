@@ -19,7 +19,7 @@ const barcodeProviders: FoodProvider[] = [openFoodFactsProvider, usdaProvider];
 const searchCache = new TtlCache<NormalizedFood[]>(10 * 60_000);
 const detailCache = new TtlCache<NormalizedFood | null>(60 * 60_000);
 
-export async function searchFoods(query: string, limit = 25): Promise<NormalizedFood[]> {
+export async function searchFoods(query: string, limit = 10): Promise<NormalizedFood[]> {
   const key = `${query.trim().toLowerCase()}|${limit}`;
   const cached = searchCache.get(key);
   if (cached) return cached;
