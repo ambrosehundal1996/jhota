@@ -1,6 +1,6 @@
 /**
  * Every analytics event the app may emit. Properties must never include photo contents,
- * food-photo URLs, or free-text the user typed about their meal.
+ * food-photo URLs, or free-text the user typed about their meal. Profile `name` is allowed.
  */
 export type AnalyticsEvent =
   | 'app_opened'
@@ -59,9 +59,29 @@ export type AnalyticsEvent =
   | 'purchases_restored'
   | 'apple_account_linked'
   | 'feedback_opened'
-  | 'feedback_sent';
+  | 'feedback_sent'
+  | 'day_closed';
 
 export type AnalyticsProps = Record<string, string | number | boolean | null | undefined>;
+
+/** Coarse bucket for dashboards. Raw `source` stays on the event for detail. */
+export type LogEntryMethod = 'ai' | 'quick_add' | 'search' | 'manual';
+
+export function logEntryMethod(source: string): LogEntryMethod {
+  if (source === 'ai_photo') return 'ai';
+  if (source === 'quick_add') return 'quick_add';
+  if (source === 'search') return 'search';
+  return 'manual';
+}
+
+/** IANA zone at event time, e.g. America/Los_Angeles. */
+export function deviceTimezone(): string {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+  } catch {
+    return 'UTC';
+  }
+}
 
 export interface AnalyticsAdapter {
   track(event: AnalyticsEvent, props: AnalyticsProps, distinctId: string): void;

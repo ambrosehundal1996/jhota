@@ -1,10 +1,12 @@
 import type { LocalDate, LogSource, RecentFood } from '@jota/domain';
 import { showToast } from '../../components/Toast';
 import { analytics } from '../../analytics';
+import { deviceTimezone, logEntryMethod } from '../../analytics/events';
 import { haptic } from '../../services/haptics';
 import { getState, setState } from '../../state/appStore';
 import { enqueueUpsert } from '../../state/outbox';
 import { findFavorite, logsForDate, overrideForDate, selectDay } from '../../state/selectors';
+import { refreshClosedDay } from './dayClose';
 import { playLogFeedback } from './feedback';
 import type {
   CustomFood,
@@ -101,8 +103,16 @@ export function addFoodLogs(inputs: NewLogInput[]): FoodLog[] {
     showToast('Couldn’t save that log.', { label: 'Retry', onPress: () => addFoodLogs(inputs), error: true });
     return [];
   }
+  const name = getState().profile?.display_name?.trim() || getState().onboarding.displayName?.trim() || null;
   for (const log of logs) {
-    analytics.track('food_logged', { source: log.source, protein_g: log.protein_g });
+    analytics.track('food_logged', {
+      source: log.source,
+      method: logEntryMethod(log.source),
+      protein_g: log.protein_g,
+      name,
+      timezone: deviceTimezone(),
+    });
+    refreshClosedDay(log.log_date);
   }
   if (__DEV__) {
     const elapsed = nowMs() - started;
@@ -129,6 +139,8 @@ export function updateFoodLog(id: string, patch: EditableLogFields): void {
   if (!existing) return;
   persistLog({ ...existing, ...patch, updated_at: nowIso() });
   analytics.track('food_log_edited', { source: existing.source });
+  refreshClosedDay(patch.log_date ?? existing.log_date);
+  if (patch.log_date && patch.log_date !== existing.log_date) refreshClosedDay(existing.log_date);
 }
 
 /** Soft-deletes and returns an undo function. */
@@ -137,9 +149,11 @@ export function deleteFoodLog(id: string): () => void {
   if (!existing) return () => undefined;
   persistLog({ ...existing, deleted_at: nowIso(), updated_at: nowIso() });
   analytics.track('food_log_deleted', { source: existing.source });
+  refreshClosedDay(existing.log_date);
   return () => {
     const current = getState().logs[id];
     if (current) persistLog({ ...current, deleted_at: null, updated_at: nowIso() });
+    refreshClosedDay(existing.log_date);
   };
 }
 
@@ -344,6 +358,7 @@ export function setDailyOverride(date: LocalDate, proteinTotalG: number): DailyO
   if (override.protein_total_g > prevTotal) {
     playLogFeedback({ grams: override.protein_total_g - prevTotal, date, prevTotal });
   }
+  refreshClosedDay(date);
   return override;
 }
 
@@ -355,6 +370,7 @@ export function removeDailyOverride(date: LocalDate): void {
   setState(s => ({ overrides: { ...s.overrides, [removed.id]: removed } }));
   enqueueUpsert('daily_overrides', removed.id, { ...removed });
   analytics.track('daily_total_removed', {});
+  refreshClosedDay(date);
 }
 
 // ---------------------------------------------------------------------------

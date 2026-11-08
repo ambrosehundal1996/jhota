@@ -11,12 +11,11 @@ import {
   type WeightUnit,
 } from '@jota/domain';
 import { analytics } from '../../analytics';
+import { deviceTimezone } from '../../analytics/events';
 import { getState, setState } from '../../state/appStore';
 import { enqueueUpsert } from '../../state/outbox';
 import type { NotificationPreferences, Profile } from '../../types/models';
 import { nowIso } from '../../utils/id';
-
-const deviceTimezone = () => Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
 
 export function toGoalSettings(profile: Profile): GoalSettings {
   return {
@@ -32,6 +31,11 @@ function writeProfile(next: Profile): void {
   const profile = { ...next, updated_at: nowIso() };
   setState({ profile });
   enqueueUpsert('protein_tracker_profiles', profile.id, { ...profile });
+  analytics.identify(profile.id, {
+    $name: profile.display_name,
+    display_name: profile.display_name,
+    timezone: profile.timezone || deviceTimezone(),
+  });
 }
 
 function applySettings(settings: GoalSettings): void {

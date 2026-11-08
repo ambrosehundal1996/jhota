@@ -62,7 +62,7 @@ export function normalizeOffProduct(product: OffProduct): NormalizedFood | null 
 async function fetchProduct(code: string): Promise<OffProduct | null> {
   const url = `https://world.openfoodfacts.org/api/v2/product/${encodeURIComponent(code)}?fields=code,product_name,brands,serving_size,serving_quantity,nutriments`;
   const response = await fetch(url, {
-    headers: { 'User-Agent': optionalEnv('OPEN_FOOD_FACTS_USER_AGENT', 'Jota/0.1 (support@jota.app)') },
+    headers: { 'User-Agent': optionalEnv('OPEN_FOOD_FACTS_USER_AGENT', 'Jota/0.1 (https://jhota.vercel.app)') },
     signal: AbortSignal.timeout(8000),
   });
   if (response.status === 404) return null;

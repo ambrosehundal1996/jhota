@@ -13,7 +13,9 @@ export interface UsdaSearchNutrient {
   nutrientId?: number;
   nutrientNumber?: string;
   value?: number;
+  amount?: number;
   unitName?: string;
+  nutrient?: { id?: number; number?: string };
 }
 
 export interface UsdaFoodMeasure {
@@ -71,10 +73,13 @@ interface Per100 {
 
 function per100FromSearch(nutrients: UsdaSearchNutrient[] = []): Per100 {
   const find = (key: keyof typeof NUTRIENT) => {
-    const hit = nutrients.find(
-      n => n.nutrientId === NUTRIENT[key] || n.nutrientNumber === NUTRIENT_NUMBER[key],
-    );
-    return typeof hit?.value === 'number' ? hit.value : null;
+    const hit = nutrients.find(n => {
+      const id = n.nutrientId ?? n.nutrient?.id;
+      const num = n.nutrientNumber ?? n.nutrient?.number;
+      return id === NUTRIENT[key] || num === NUTRIENT_NUMBER[key];
+    });
+    const value = hit?.value ?? hit?.amount;
+    return typeof value === 'number' ? value : null;
   };
   return { protein: find('protein'), energy: find('energy'), carbs: find('carbs'), fat: find('fat') };
 }
@@ -214,14 +219,36 @@ export function rankUsdaResults(query: string, foods: UsdaSearchFood[]): UsdaSea
     .map(x => x.food);
 }
 
-async function usdaFetch<T>(path: string, params: Record<string, string>): Promise<T> {
+const SEARCH_DATA_TYPES = ['Survey (FNDDS)', 'Foundation', 'SR Legacy', 'Branded'] as const;
+
+function throwUsda(response: Response, detail: string): never {
+  console.warn(`[usda] ${response.status} ${response.url.replace(/api_key=[^&]+/, 'api_key=***')}`, detail.slice(0, 200));
+  if (response.status === 404) throw new HttpError(404, 'not_found', 'Food not found.');
+  if (response.status === 429) throw new HttpError(429, 'provider_rate_limited', 'Food search is busy. Try again in a moment.');
+  throw new HttpError(502, 'provider_unavailable', 'Food search is temporarily unavailable.');
+}
+
+async function usdaFetch<T>(path: string, params: Record<string, string> = {}): Promise<T> {
   const url = new URL(`${BASE}${path}`);
   url.searchParams.set('api_key', requireEnv('USDA_API_KEY'));
   for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
   const response = await fetch(url, { signal: AbortSignal.timeout(8000) });
-  if (response.status === 404) throw new HttpError(404, 'not_found', 'Food not found.');
-  if (!response.ok) throw new HttpError(502, 'provider_unavailable', 'Food search is temporarily unavailable.');
+  if (!response.ok) throwUsda(response, await response.text().catch(() => ''));
   return (await response.json()) as T;
+}
+
+/** POST search — GET with `Survey (FNDDS)` in the query string is rejected as 400 by USDA's gateway. */
+async function usdaSearch(query: string, pageSize: number, dataType: readonly string[]): Promise<{ foods?: UsdaSearchFood[] }> {
+  const url = new URL(`${BASE}/foods/search`);
+  url.searchParams.set('api_key', requireEnv('USDA_API_KEY'));
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ query, pageSize, dataType }),
+    signal: AbortSignal.timeout(8000),
+  });
+  if (!response.ok) throwUsda(response, await response.text().catch(() => ''));
+  return (await response.json()) as { foods?: UsdaSearchFood[] };
 }
 
 export const usdaProvider: FoodProvider = {
@@ -229,11 +256,7 @@ export const usdaProvider: FoodProvider = {
 
   async searchFoods(query, options) {
     const limit = options?.limit ?? 25;
-    const data = await usdaFetch<{ foods?: UsdaSearchFood[] }>('/foods/search', {
-      query,
-      pageSize: '50',
-      dataType: 'Survey (FNDDS),Foundation,SR Legacy,Branded',
-    });
+    const data = await usdaSearch(query, 50, SEARCH_DATA_TYPES);
     const seen = new Set<string>();
     const results: NormalizedFood[] = [];
     for (const food of rankUsdaResults(query, data.foods ?? [])) {
@@ -257,11 +280,7 @@ export const usdaProvider: FoodProvider = {
   async lookupBarcode(barcode) {
     const code = normalizeBarcode(barcode);
     if (!code) return null;
-    const data = await usdaFetch<{ foods?: UsdaSearchFood[] }>('/foods/search', {
-      query: code,
-      dataType: 'Branded',
-      pageSize: '10',
-    });
+    const data = await usdaSearch(code, 10, ['Branded']);
     const strip = (v: string) => v.replace(/^0+/, '');
     const match = (data.foods ?? []).find(f => f.gtinUpc && strip(normalizeBarcode(f.gtinUpc)) === strip(code));
     return match ? normalizeUsdaSearchFood(match) : null;

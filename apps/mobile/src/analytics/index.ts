@@ -1,8 +1,9 @@
 import { appConfig } from '../config';
-import { getState } from '../state/appStore';
-import type { AnalyticsAdapter, AnalyticsEvent, AnalyticsProps } from './events';
+import { getState, LOCAL_USER_ID, useAppStore } from '../state/appStore';
+import { deviceTimezone, type AnalyticsAdapter, type AnalyticsEvent, type AnalyticsProps } from './events';
 
-export type { AnalyticsEvent, AnalyticsProps };
+export type { AnalyticsEvent, AnalyticsProps, LogEntryMethod };
+export { deviceTimezone, logEntryMethod } from './events';
 
 const consoleAdapter: AnalyticsAdapter = {
   track: (event, props) => {
@@ -38,13 +39,23 @@ function posthogAdapter(apiKey: string, host: string): AnalyticsAdapter {
   };
 
   return {
-    track: (event, props, distinctId) =>
-      void send(event, {
+    track: (event, props, distinctId) => {
+      const name = typeof props.name === 'string' ? props.name : undefined;
+      const timezone = typeof props.timezone === 'string' ? props.timezone : undefined;
+      return void send(event, {
         event,
         distinct_id: distinctId,
-        properties: { ...props, $lib: 'jota-ios' },
+        properties: {
+          ...props,
+          $lib: 'jota-ios',
+          $set: {
+            ...(name ? { $name: name, display_name: name } : {}),
+            ...(timezone ? { timezone } : {}),
+          },
+        },
         timestamp: new Date().toISOString(),
-      }),
+      });
+    },
     identify: (distinctId, traits) =>
       void send('$identify', { event: '$identify', distinct_id: distinctId, properties: { $set: traits } }),
   };
@@ -57,12 +68,46 @@ if (appConfig.posthogKey) {
   console.warn('[posthog] skipped — POSTHOG_API_KEY is empty. Events stay in the Metro log only.');
 }
 
+function currentDisplayName(): string | null {
+  const { profile, onboarding } = getState();
+  return profile?.display_name?.trim() || onboarding.displayName?.trim() || null;
+}
+
+function personKey(): string {
+  const { userId } = getState();
+  return `${userId}:${currentDisplayName() ?? ''}:${deviceTimezone()}`;
+}
+
+function personTraits(): AnalyticsProps {
+  const name = currentDisplayName();
+  return { $name: name, display_name: name, timezone: deviceTimezone() };
+}
+
 export const analytics = {
   track(event: AnalyticsEvent, props: AnalyticsProps = {}) {
     const distinctId = getState().userId;
-    for (const adapter of adapters) adapter.track(event, props, distinctId);
+    const name = currentDisplayName();
+    const next = { timezone: deviceTimezone(), ...(name ? { name } : {}), ...props };
+    for (const adapter of adapters) adapter.track(event, next, distinctId);
   },
   identify(distinctId: string, traits: AnalyticsProps = {}) {
+    if (!distinctId || distinctId === LOCAL_USER_ID) return;
     for (const adapter of adapters) adapter.identify(distinctId, traits);
+  },
+  /** Bind this device's user to a PostHog person so People and HogQL can show a name. */
+  identifyCurrentUser() {
+    const { userId } = getState();
+    analytics.identify(userId, personTraits());
+  },
+  /** Re-identifies when Apple linking or a display-name edit changes who this device is. */
+  startPersonSync(): () => void {
+    let last = personKey();
+    analytics.identifyCurrentUser();
+    return useAppStore.subscribe(() => {
+      const next = personKey();
+      if (next === last) return;
+      last = next;
+      analytics.identifyCurrentUser();
+    });
   },
 };

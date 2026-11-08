@@ -15,7 +15,7 @@ The site is safe to deploy as a draft. Download buttons email `support@jota.app`
 
 ## Launch links
 
-- [ ] Confirm `jota.app` is owned and this site is deployed there. The iOS app already uses `https://jota.app/privacy` and `https://jota.app/terms`.
+- [ ] Give this site its own Vercel project (root `apps/web`) and its own URL. https://jhota.vercel.app must stay the API. The app currently links privacy and terms to `https://jhota.vercel.app/privacy` and `https://jhota.vercel.app/terms`, which 404 on the API host. Point `PRIVACY_URL` and `TERMS_URL` at the marketing host after it exists.
 - [ ] Add `appStoreUrl` when a real listing exists. The button then reads “Get Jota”.
 - [ ] Add `testFlightUrl` if the beta should be a link. The button then reads “Join the beta”.
 - [ ] Add `instagramUrl` and `tiktokUrl`. The footer hides them until they are set.

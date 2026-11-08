@@ -1,5 +1,6 @@
 import { toLocalDate } from '@jota/domain';
 import { AppState } from 'react-native';
+import { flushClosedDays } from './logging/dayClose';
 import { getState, useAppStore, type AppData } from '../state/appStore';
 import { reportDeliveredReminders, syncReminders } from '../services/notifications/reminders';
 import { updateWidget } from '../services/widget/widgetBridge';
@@ -17,6 +18,7 @@ function scheduleMidnightWidgetRefresh(): () => void {
     if (midnightTimer) clearTimeout(midnightTimer);
     midnightTimer = setTimeout(() => {
       midnightTimer = null;
+      flushClosedDays();
       void updateWidget(true);
       arm();
     }, msUntilNextLocalMidnight());
@@ -53,6 +55,7 @@ export function startDataEffects(): () => void {
   });
   const appSub = AppState.addEventListener('change', s => {
     if (s !== 'active') return;
+    flushClosedDays();
     runEffects();
     void updateWidget(true);
     void reportDeliveredReminders();
@@ -63,6 +66,7 @@ export function startDataEffects(): () => void {
     const today = toLocalDate(new Date());
     if (today === lastDate) return;
     lastDate = today;
+    flushClosedDays();
     void updateWidget(true);
   }, 30_000);
   return () => {

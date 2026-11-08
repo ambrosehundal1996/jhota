@@ -14,7 +14,7 @@ export function errorResponse(status: number, code: string, message: string): Re
 
 type Handler = (request: Request) => Promise<Response>;
 
-/** Comma-separated browser origins for the web build, e.g. "http://localhost:8080,https://app.jota.app". */
+/** Comma-separated browser origins for the web build, e.g. "http://localhost:8080,https://jhota.vercel.app". */
 function allowedOrigins(): string[] {
   return (process.env.WEB_ALLOWED_ORIGINS ?? '')
     .split(',')

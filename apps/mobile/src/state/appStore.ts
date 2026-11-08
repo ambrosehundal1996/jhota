@@ -38,6 +38,10 @@ export interface AppFlags {
   devBypassPaywall: boolean;
   /** Open the log modal once after “Log your first protein” in onboarding. */
   openLogAfterOnboarding: boolean;
+  /** Last local date we sent `day_closed` for. */
+  lastClosedDate: LocalDate | null;
+  /** Last local date the app was opened. Empty days still close so misses count. */
+  lastOpenedDate: LocalDate | null;
 }
 
 export interface AppData {
@@ -98,13 +102,15 @@ export const initialAppData = (): AppData => ({
     reportedReminderIds: [],
     devBypassPaywall: false,
     openLogAfterOnboarding: false,
+    lastClosedDate: null,
+    lastOpenedDate: null,
   },
 });
 
 export const useAppStore = create<AppData>()(
   persist(initialAppData, {
     name: 'jota-app',
-    version: 5,
+    version: 6,
     storage: createJSONStorage(() => zustandStorage),
     migrate: (persisted, version) => {
       const state = persisted as AppData;
@@ -125,6 +131,13 @@ export const useAppStore = create<AppData>()(
       }
       if (version < 5) {
         state.flags = { ...state.flags, openLogAfterOnboarding: state.flags?.openLogAfterOnboarding ?? false };
+      }
+      if (version < 6) {
+        state.flags = {
+          ...state.flags,
+          lastClosedDate: state.flags?.lastClosedDate ?? null,
+          lastOpenedDate: state.flags?.lastOpenedDate ?? null,
+        };
       }
       return state;
     },

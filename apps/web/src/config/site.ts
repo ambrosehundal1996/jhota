@@ -4,7 +4,8 @@
  * Empty strings and `confirmed.* = false` are unfinished on purpose.
  * Do not invent a legal name, address, price, or download URL to fill them.
  * Support email matches SUPPORT_EMAIL in apps/mobile/.env.example.
- * The public URL matches PRIVACY_URL / TERMS_URL already used by the iOS app.
+ * url is the metadata base for this site. https://jhota.vercel.app is the API host;
+ * do not deploy this app onto that Vercel project.
  */
 
 export const siteConfig = {
@@ -12,7 +13,7 @@ export const siteConfig = {
   tagline: "Hit your protein goals. Without the hassle.",
   description:
     "JOTA is a protein-first iPhone app. Photograph a meal, get a protein estimate you can edit, and aim for a daily range instead of one rigid number.",
-  url: "https://jota.app",
+  url: "https://jhota.vercel.app",
   supportEmail: "support@jota.app",
   /** Operating company. Required before the legal pages are treated as final. */
   legalEntity: "",
@@ -145,7 +146,7 @@ export function launchChecklist(): ChecklistItem[] {
     {
       id: "domain",
       area: "Launch",
-      detail: "Confirm jota.app is owned and this site is deployed there. The iOS app already links privacy and terms to https://jota.app.",
+      detail: "https://jhota.vercel.app is the API. This marketing site needs its own host. jota.app is not connected to either.",
       done: confirmed.domainOwnedAndDeployed,
     },
     {

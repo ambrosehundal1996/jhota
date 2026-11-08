@@ -11,7 +11,7 @@ From the repo root, `npm run site` does the same thing.
 
 ## Deploy
 
-Create a Vercel project with the root directory set to `apps/web`. The app router serves each URL directly, including on refresh. Point `jota.app` at that project when the domain is ready. The iOS app already links privacy and terms to `https://jota.app`.
+Deploy this as its own Vercel project with root directory `apps/web`. Leave https://jhota.vercel.app on the API project (`apps/api`). Putting this app on that host would replace the API. `jota.app` is not connected to either project.
 
 No secrets belong in this app. Public values live in `src/config/site.ts`.
 

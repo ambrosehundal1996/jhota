@@ -76,6 +76,16 @@ describe('USDA normalization', () => {
     expect(normalizeUsdaSearchFood({ fdcId: 2, description: 'Water', dataType: 'Foundation', foodNutrients: [] })).toBeNull();
   });
 
+  it('reads nested nutrient amount from search payloads', () => {
+    const food = normalizeUsdaSearchFood({
+      fdcId: 9,
+      description: 'Chicken breast',
+      dataType: 'Foundation',
+      foodNutrients: [{ nutrient: { id: 1003, number: '203' }, amount: 31 }],
+    });
+    expect(food).toMatchObject({ proteinG: 31, servingDescription: '100g' });
+  });
+
   it('ranks generic exact matches above branded items', () => {
     const ranked = rankUsdaResults('greek yogurt', [
       { fdcId: 1, description: 'GREEK YOGURT VANILLA', dataType: 'Branded' },

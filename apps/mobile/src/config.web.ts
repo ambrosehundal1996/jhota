@@ -11,8 +11,8 @@ export const appConfig = {
   entitlementId: read('REVENUECAT_ENTITLEMENT_ID') || 'pro',
   posthogKey: read('POSTHOG_API_KEY'),
   posthogHost: read('POSTHOG_HOST') || 'https://us.i.posthog.com',
-  privacyUrl: read('PRIVACY_URL') || 'https://jota.app/privacy',
-  termsUrl: read('TERMS_URL') || 'https://jota.app/terms',
+  privacyUrl: read('PRIVACY_URL') || 'https://jhota.vercel.app/privacy',
+  termsUrl: read('TERMS_URL') || 'https://jhota.vercel.app/terms',
   supportEmail: read('SUPPORT_EMAIL') || 'support@jota.app',
   feedbackEmail: read('FEEDBACK_EMAIL') || 'ambrosehundal0082@gmail.com',
 } as const;

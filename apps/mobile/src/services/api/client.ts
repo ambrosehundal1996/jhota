@@ -20,6 +20,12 @@ export async function apiFetch<T>(
   init: { method?: 'GET' | 'POST'; body?: unknown; timeoutMs?: number; signal?: AbortSignal } = {},
 ): Promise<T> {
   if (!appConfig.apiBaseUrl) throw new ApiError(0, 'not_configured', 'This feature is not configured yet.');
+  try {
+    const { ensureSession } = await import('../supabase/auth');
+    await ensureSession();
+  } catch {
+    // Search still tries; a missing token becomes 401 from the API.
+  }
   const token = await getAccessToken();
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), init.timeoutMs ?? 15_000);

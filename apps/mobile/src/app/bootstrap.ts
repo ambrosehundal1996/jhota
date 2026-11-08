@@ -1,4 +1,5 @@
 import { analytics } from '../analytics';
+import { flushClosedDays } from '../features/logging/dayClose';
 import { startDataEffects } from '../features/effects';
 import { startDevTools } from './devTools';
 import { applySubscriptionStatus, subscriptions } from '../services/subscriptions';
@@ -36,6 +37,8 @@ export function bootstrap(): () => void {
   if (started) return () => undefined;
   started = true;
   analytics.track('app_opened', {});
+  flushClosedDays();
+  const stopPersonSync = analytics.startPersonSync?.() ?? (() => undefined);
   const stopSync = startSyncEngine();
   const stopEffects = startDataEffects();
   const stopDevTools = startDevTools();
@@ -52,6 +55,7 @@ export function bootstrap(): () => void {
     });
 
   return () => {
+    stopPersonSync();
     stopSync();
     stopEffects();
     stopDevTools();

@@ -71,7 +71,7 @@ npm run site          # http://localhost:3000
 npm run site:build
 ```
 
-Deploy it as its own Vercel project with root directory `apps/web`. Routes are `/`, `/privacy`, `/support`, `/terms`, and `/delete-account`. Empty legal, store, and social fields are listed in `apps/web/PRELAUNCH.md` and on the privacy page checklist. Do not invent them.
+The API stays on its own Vercel project, root directory `apps/api`, at https://jhota.vercel.app. Deploy the marketing site as a second Vercel project with root directory `apps/web`. Do not point that project at `jhota.vercel.app` or change the API project's root: one project replaces the other. `jota.app` is not this site. Empty legal, store, and social fields are listed in `apps/web/PRELAUNCH.md`.
 
 ### Web app
 

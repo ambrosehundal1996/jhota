@@ -10,9 +10,9 @@ describe('CORS for the web build', () => {
   });
 
   it('allows only configured origins', async () => {
-    process.env.WEB_ALLOWED_ORIGINS = 'http://localhost:8080, https://app.jota.app/';
-    const ok = await handle(async () => json({ ok: true }))(request('https://app.jota.app'));
-    expect(ok.headers.get('access-control-allow-origin')).toBe('https://app.jota.app');
+    process.env.WEB_ALLOWED_ORIGINS = 'http://localhost:8080, https://jhota.vercel.app/';
+    const ok = await handle(async () => json({ ok: true }))(request('https://jhota.vercel.app'));
+    expect(ok.headers.get('access-control-allow-origin')).toBe('https://jhota.vercel.app');
 
     const blocked = await handle(async () => json({ ok: true }))(request('https://evil.example'));
     expect(blocked.headers.get('access-control-allow-origin')).toBeNull();
